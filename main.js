@@ -20,8 +20,8 @@ chrome.webNavigation.onCompleted.addListener((details) => {
   const url = details.url;
 
   if (url.includes('disneyplus.com')) {
-    injectScript(details.tabId, 'services/disney.js');
+    injectScript(details.tabId, 'handlers/disney.js');
   } else if (url.includes('hbomax.com')) {
-    injectScript(details.tabId, 'services/hbomax.js');
+    injectScript(details.tabId, 'handlers/hbomax.js');
   }
 });

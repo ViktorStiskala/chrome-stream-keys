@@ -4,11 +4,12 @@ BUILD_DIR = build
 PACKAGE_NAME = stream-keys.zip
 
 # Files to include in the package
+# NOTE: Update these paths when changing project structure or adding new handlers
 PACKAGE_FILES = \
 	main.js \
 	manifest.json \
-	services/disney.js \
-	services/hbomax.js \
+	handlers/disney.js \
+	handlers/hbomax.js \
 	logo/StreamKeys_16.png \
 	logo/StreamKeys_32.png \
 	logo/StreamKeys_48.png \

@@ -8,20 +8,22 @@ alwaysApply: true
 ## Project Structure
 
 ```
-video-controls/
+stream-keys/
 ├── main.js              # Service worker - routes to appropriate handler based on URL
 ├── manifest.json        # Extension manifest with host permissions
-└── services/
+├── Makefile             # Build script with hardcoded file paths
+└── handlers/
     ├── disney.js        # Disney+ keyboard handler
     └── hbomax.js        # HBO Max keyboard handler
 ```
 
 ## Adding New Streaming Services
 
-1. Create new handler in `services/` folder (e.g., `netflix.js`)
+1. Create new handler in `handlers/` folder (e.g., `netflix.js`)
 2. Add URL matching in `main.js` router
 3. Add host permissions in `manifest.json`
-4. Create service-specific Cursor rules file
+4. Add handler file to `Makefile` PACKAGE_FILES list
+5. Create service-specific Cursor rules file
 
 ## Keyboard Event Capture Strategy
 
@@ -46,7 +48,7 @@ Inject into MAIN world to share context with the streaming service's scripts:
 ```javascript
 chrome.scripting.executeScript({
   target: { tabId, allFrames: true },
-  files: ['services/handler.js'],
+  files: ['handlers/handler.js'],
   world: 'MAIN'
 });
 ```
@@ -55,3 +57,7 @@ chrome.scripting.executeScript({
 
 - `console.info('[StreamKeys] ...')` - Extension loaded messages
 - `console.warn('[StreamKeys] ...')` - Button not found or other recoverable issues
+
+## Build System
+
+The `Makefile` contains hardcoded file paths in `PACKAGE_FILES`. When changing project structure or adding new required files, update these paths manually.
