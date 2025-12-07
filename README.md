@@ -93,4 +93,4 @@ After exiting fullscreen, browsers require a real user click before routing keyb
 
 ## License
 
-MIT
+[MIT](./LICENSE)
