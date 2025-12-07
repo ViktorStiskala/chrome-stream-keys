@@ -1,3 +1,5 @@
+<img src="./assets/icon.png" width="96">
+
 # Stream Keys
 
 A Chrome extension that improves keyboard controls on streaming services by fixing spacebar behavior, adding reliable keyboard shortcuts, and providing quick subtitle toggling.
