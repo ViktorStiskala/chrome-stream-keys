@@ -49,7 +49,7 @@ This extension intercepts keyboard events at the highest level and redirects the
 
 ### From Releases
 
-1. Go to [releases page](https://github.com/ViktorStiskala/chrome-stream-keys/releases) and download the ZIP file.
+1. Go to [releases page](https://github.com/ViktorStiskala/chrome-stream-keys/releases/latest) and download the ZIP file.
 2. Extract ZIP to destination folder.
 3. Open Chrome and navigate to `chrome://extensions/`
 4. Enable "Developer mode" in the top right
