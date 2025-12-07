@@ -47,6 +47,14 @@ This extension intercepts keyboard events at the highest level and redirects the
 
 ## Installation
 
+### From Releases
+
+1. Go to [releases page](https://github.com/ViktorStiskala/chrome-stream-keys/releases) and download the ZIP file.
+2. Extract ZIP to destination folder.
+3. Open Chrome and navigate to `chrome://extensions/`
+4. Enable "Developer mode" in the top right
+5. Click "Load unpacked" and select the extension folder
+
 ### From Source
 
 1. Clone or download this repository
