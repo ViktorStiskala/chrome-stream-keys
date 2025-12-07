@@ -1,6 +1,10 @@
+<img src="./assets/icon.png" width="96">
+
 # Stream Keys
 
 A Chrome extension that improves keyboard controls on streaming services by fixing spacebar behavior, adding reliable keyboard shortcuts, and providing quick subtitle toggling.
+
+![hero_banner](./assets/hero_banner.png)
 
 ## Supported Services
 
@@ -89,4 +93,4 @@ After exiting fullscreen, browsers require a real user click before routing keyb
 
 ## License
 
-MIT
+[MIT](./LICENSE)
