@@ -2,7 +2,7 @@
 
 # Stream Keys
 
-A Chrome extension that improves keyboard controls on streaming services by fixing spacebar behavior, adding reliable keyboard shortcuts, and providing quick subtitle toggling.
+A browser extension for Chrome and Firefox that improves keyboard controls on streaming services by fixing spacebar behavior, adding reliable keyboard shortcuts, and providing quick subtitle toggling.
 
 ![hero_banner](./assets/hero_banner.png)
 
@@ -54,33 +54,46 @@ This extension intercepts keyboard events at the highest level and redirects the
 
 ## Installation
 
-### From Releases
+### Chrome - From Releases
 
-1. Go to [releases page](https://github.com/ViktorStiskala/chrome-stream-keys/releases/latest) and download the ZIP file.
-2. Extract ZIP to destination folder.
+1. Go to [releases page](https://github.com/ViktorStiskala/chrome-stream-keys/releases/latest) and download `stream-keys-chrome.zip`
+2. Extract ZIP to destination folder
 3. Open Chrome and navigate to `chrome://extensions/`
 4. Enable "Developer mode" in the top right
-5. Click "Load unpacked" and select the extension folder
+5. Click "Load unpacked" and select the extracted folder
+
+### Firefox - From Releases
+
+1. Go to [releases page](https://github.com/ViktorStiskala/chrome-stream-keys/releases/latest) and download `stream-keys-firefox.zip`
+2. Open Firefox and navigate to `about:debugging#/runtime/this-firefox`
+3. Click "Load Temporary Add-on" and select the ZIP file
+
+> Note: For permanent installation in Firefox, the extension needs to be signed by Mozilla.
 
 ### From Source
 
 1. Clone or download this repository
-2. Open Chrome and navigate to `chrome://extensions/`
-3. Enable "Developer mode" in the top right
-4. Click "Load unpacked" and select the extension folder
+2. Build the extension (see Building section)
+3. Load the unpacked extension from `build/chrome/extension/` or `build/firefox/extension/`
 
 ### Building
 
 ```bash
-make build    # Creates build/stream-keys.zip
-make clean    # Removes build directory
+make build          # Build both Chrome and Firefox extensions
+make build-chrome   # Build Chrome extension only
+make build-firefox  # Build Firefox extension only
+make clean          # Remove build directory
 ```
+
+Output files:
+- `build/chrome/stream-keys-chrome.zip`
+- `build/firefox/stream-keys-firefox.zip`
 
 ## How It Works
 
 ### Architecture
 
-The extension uses a base handler (`handlers/base.js`) with shared functionality, and service-specific handlers that provide configuration for each streaming service.
+The extension uses a base handler (`src/handlers/base.js`) with shared functionality, and service-specific handlers that provide configuration for each streaming service. Source files are shared between Chrome and Firefox builds, with only the manifest differing.
 
 ### Keyboard Event Capture
 
@@ -93,7 +106,7 @@ The extension uses `window.addEventListener('keydown', handler, true)` with the 
 
 ### Settings Injection
 
-Settings are stored in `chrome.storage.sync` and injected into page context as `window.__streamKeysSettings` before handlers are loaded.
+Settings are stored in `chrome.storage.sync` (works in Firefox via compatibility layer) and injected into page context as `window.__streamKeysSettings` before handlers are loaded.
 
 ### Fullscreen Focus Workaround
 

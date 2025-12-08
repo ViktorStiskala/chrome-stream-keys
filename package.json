@@ -1,0 +1,16 @@
+{
+  "name": "stream-keys",
+  "version": "1.1.2",
+  "description": "Browser extension for keyboard controls on streaming services",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "jsdom": "^25.0.1",
+    "vitest": "^2.1.6"
+  },
+  "private": true
+}
+

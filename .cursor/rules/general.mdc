@@ -9,26 +9,31 @@ alwaysApply: true
 
 ```
 stream-keys/
-├── main.js              # Service worker - routes to appropriate handler based on URL
-├── manifest.json        # Extension manifest with host permissions
-├── Makefile             # Build script with hardcoded file paths
-├── handlers/
-│   ├── base.js          # Shared base handler with common functionality
-│   ├── disney.js        # Disney+ service configuration
-│   └── hbomax.js        # HBO Max service configuration
-└── settings/
-    ├── settings.html    # Options page UI
-    ├── settings.js      # Settings page logic (storage, drag-drop)
-    └── settings.css     # Settings page styles
+├── src/                     # Shared source files
+│   ├── background.js        # Background script - routes to appropriate handler based on URL
+│   ├── handlers/
+│   │   ├── base.js          # Shared base handler with common functionality
+│   │   ├── disney.js        # Disney+ service configuration
+│   │   └── hbomax.js        # HBO Max service configuration
+│   └── settings/
+│       ├── settings.html    # Options page UI
+│       ├── settings.js      # Settings page logic (storage, drag-drop)
+│       └── settings.css     # Settings page styles
+├── manifests/
+│   ├── chrome.json          # Chrome Manifest V3 (service_worker)
+│   └── firefox.json         # Firefox Manifest V3 (background.scripts)
+├── logo/                    # Generated logos
+├── assets/                  # Source assets
+└── Makefile                 # Build script for Chrome and Firefox
 ```
 
 ## Adding New Streaming Services
 
-1. Create new handler in `handlers/` folder (e.g., `netflix.js`)
+1. Create new handler in `src/handlers/` folder (e.g., `netflix.js`)
 2. Use `window.StreamKeys.createHandler(config)` with service-specific config
-3. Add URL matching in `main.js` router
-4. Add host permissions in `manifest.json`
-5. Add handler file to `Makefile` PACKAGE_FILES list
+3. Add URL matching in `src/background.js` router
+4. Add host permissions in both `manifests/chrome.json` and `manifests/firefox.json`
+5. Add handler file to `Makefile` SRC_FILES list
 6. Create service-specific Cursor rules file
 
 ## Base Handler Configuration
@@ -92,8 +97,26 @@ All injected into MAIN world to share context with the streaming service's scrip
 
 ## Build System
 
-The `Makefile` contains hardcoded file paths in `PACKAGE_FILES`. When changing project structure or adding new required files, update these paths manually.
+The build system creates separate packages for Chrome and Firefox from shared source files:
+
+- `make build` - Build both Chrome and Firefox extensions
+- `make build-chrome` - Build Chrome extension only
+- `make build-firefox` - Build Firefox extension only
+- `make clean` - Remove build directory
+
+Output:
+- `build/chrome/stream-keys-chrome.zip`
+- `build/firefox/stream-keys-firefox.zip`
+
+When adding new handlers, update the `SRC_FILES` list in the Makefile.
+
+## Manifest Differences
+
+- **Chrome**: Uses `service_worker` in background config
+- **Firefox**: Uses `scripts` array in background config, requires `browser_specific_settings.gecko.id`
+
+Both manifests must be kept in sync for version numbers and permissions.
 
 ## Manifest Constraints
 
-- The `description` field in `manifest.json` has a maximum length of 132 characters.
+- The `description` field in manifest files has a maximum length of 132 characters.
