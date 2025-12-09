@@ -9,6 +9,7 @@ export interface VideoGetterConfig {
   getPlayer: () => HTMLElement | null;
   getVideo?: () => HTMLVideoElement | null;
   getPlaybackTime?: () => number | null;
+  getDuration?: () => number | null;
 }
 
 /**
@@ -29,10 +30,12 @@ function isActiveVideo(video: HTMLVideoElement): boolean {
  * Augment a video element with StreamKeys methods.
  * Adds _streamKeysGetPlaybackTime() which uses custom logic if available.
  * Adds _streamKeysGetStableTime() which returns the stable pre-seek time.
+ * Adds _streamKeysGetDuration() which uses custom logic if available.
  */
 function augmentVideoElement(
   video: HTMLVideoElement,
-  customGetPlaybackTime?: () => number | null
+  customGetPlaybackTime?: () => number | null,
+  customGetDuration?: () => number | null
 ): StreamKeysVideoElement {
   const augmented = video as StreamKeysVideoElement;
 
@@ -54,6 +57,14 @@ function augmentVideoElement(
         augmented._streamKeysGetPlaybackTime?.() ??
         video.currentTime
       );
+    };
+
+    augmented._streamKeysGetDuration = () => {
+      if (customGetDuration) {
+        const duration = customGetDuration();
+        if (duration !== null) return duration;
+      }
+      return video.duration;
     };
   }
 
@@ -117,7 +128,7 @@ export function createVideoGetter(config: VideoGetterConfig): () => StreamKeysVi
     }
 
     if (video) {
-      return augmentVideoElement(video, config.getPlaybackTime);
+      return augmentVideoElement(video, config.getPlaybackTime, config.getDuration);
     }
     return null;
   };

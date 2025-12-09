@@ -127,7 +127,7 @@ export function createRestoreDialog(
   }
 
   const video = getVideoElement();
-  const videoDuration = video ? video.duration : 0;
+  const videoDuration = video?._streamKeysGetDuration?.() ?? 0;
 
   restoreDialog = document.createElement('div');
   restoreDialog.id = DIALOG_ID;

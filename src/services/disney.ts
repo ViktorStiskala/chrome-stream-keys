@@ -111,6 +111,52 @@ function getDisneyPlaybackTime(): number | null {
 }
 
 /**
+ * Get Disney+ actual video duration from progress bar.
+ * Disney+ uses MediaSource Extensions where video.duration is buffer-relative,
+ * not actual content duration. The real duration is in the progress bar's aria-valuemax.
+ */
+function getDisneyDuration(): number | null {
+  const now = Date.now();
+
+  // Helper to get duration from progress bar thumb
+  const getDurationFromThumb = (thumb: Element | null): number | null => {
+    if (!thumb) return null;
+    const valueMax = thumb.getAttribute('aria-valuemax');
+    if (valueMax) {
+      const seconds = parseInt(valueMax, 10);
+      if (!isNaN(seconds) && seconds >= 0) {
+        return seconds;
+      }
+    }
+    return null;
+  };
+
+  // Try to use cached element first
+  if (disneyProgressBarCache && now - disneyProgressBarCache.lastCheck < DISNEY_CACHE_TTL) {
+    const duration = getDurationFromThumb(disneyProgressBarCache.element);
+    if (duration !== null) {
+      return duration;
+    }
+  }
+
+  // Find progress-bar element and access its shadow DOM
+  const progressBar = document.querySelector('progress-bar');
+  if (progressBar?.shadowRoot) {
+    const thumb = progressBar.shadowRoot.querySelector('.progress-bar__thumb');
+    const duration = getDurationFromThumb(thumb);
+    if (duration !== null) {
+      // Cache the thumb element (also used by playback time)
+      disneyProgressBarCache = { element: thumb, lastCheck: now };
+      return duration;
+    }
+  }
+
+  // Update cache to indicate we didn't find it
+  disneyProgressBarCache = { element: null, lastCheck: now };
+  return null;
+}
+
+/**
  * Initialize Disney+ handler
  */
 export function initDisneyHandler(): void {
@@ -122,6 +168,8 @@ export function initDisneyHandler(): void {
     getVideo: getDisneyVideo,
 
     getPlaybackTime: getDisneyPlaybackTime,
+
+    getDuration: getDisneyDuration,
 
     getButton: (keyCode: string): HTMLElement | null => {
       const selector = keyMap[keyCode];

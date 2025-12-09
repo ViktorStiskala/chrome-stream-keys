@@ -45,6 +45,8 @@ export interface HandlerConfig {
   getVideo?: () => HTMLVideoElement | null;
   /** Custom playback time getter for services where video.currentTime is unreliable */
   getPlaybackTime?: () => number | null;
+  /** Custom duration getter for services where video.duration is unreliable */
+  getDuration?: () => number | null;
   subtitles?: SubtitleConfig;
   features?: FeatureFlags;
 }
@@ -69,6 +71,8 @@ export interface StreamKeysVideoElement extends HTMLVideoElement {
   _streamKeysGetPlaybackTime?: () => number;
   /** Get stable time for position restore (uses fallback chain) */
   _streamKeysGetStableTime?: () => number;
+  /** Get actual video duration (uses custom logic if available, else video.duration) */
+  _streamKeysGetDuration?: () => number;
 }
 
 // Player element with StreamKeys properties

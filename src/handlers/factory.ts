@@ -41,6 +41,7 @@ export function createHandler(config: HandlerConfig): HandlerAPI {
     getPlayer: config.getPlayer,
     getVideo: config.getVideo,
     getPlaybackTime: config.getPlaybackTime,
+    getDuration: config.getDuration,
   });
 
   // Initialize features
