@@ -1,7 +1,7 @@
 ---
 description: Disney+ Handler - Shadow DOM and Player Controls
 globs:
-  - "**/disney.js"
+  - "**/disney.ts"
 ---
 
 # Disney+ Handler Notes
@@ -9,7 +9,7 @@ globs:
 ## Shadow DOM Button Access
 
 Disney+ player controls use Shadow DOM. Access buttons via:
-```javascript
+```typescript
 document.body.querySelector(selector)?.shadowRoot?.querySelector("info-tooltip button")
 ```
 

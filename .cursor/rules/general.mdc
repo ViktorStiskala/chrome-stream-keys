@@ -5,40 +5,68 @@ alwaysApply: true
 
 # StreamKeys Extension Development Notes
 
+## IMPORTANT: Code Quality Requirements
+
+**After ANY code change, you MUST run linters and fix all issues before the task is complete.**
+
+Run `npm run check` to verify:
+- TypeScript type checking (`npm run typecheck`)
+- ESLint linting (`npm run lint`)
+- Prettier formatting (`npm run format:check`)
+
+A task is NOT complete until all checks pass. Use `npm run lint:fix` and `npm run format` to auto-fix issues.
+
 ## Project Structure
 
 ```
 stream-keys/
-├── main.js              # Service worker - routes to appropriate handler based on URL
-├── manifest.json        # Extension manifest with host permissions
-├── Makefile             # Build script with hardcoded file paths
-├── handlers/
-│   ├── base.js          # Shared base handler with common functionality
-│   ├── disney.js        # Disney+ service configuration
-│   └── hbomax.js        # HBO Max service configuration
-└── settings/
-    ├── settings.html    # Options page UI
-    ├── settings.js      # Settings page logic (storage, drag-drop)
-    └── settings.css     # Settings page styles
+├── src/
+│   ├── background/          # Service worker
+│   │   └── index.ts         # Routes to appropriate handler based on URL
+│   ├── features/            # Composable feature modules
+│   │   ├── restore-position/
+│   │   ├── subtitles/
+│   │   └── keyboard/
+│   ├── ui/                  # UI utilities
+│   │   ├── banner.ts
+│   │   ├── overlay.ts
+│   │   └── styles/
+│   ├── core/                # Core utilities
+│   │   ├── focus.ts
+│   │   ├── fullscreen.ts
+│   │   ├── player.ts
+│   │   ├── video.ts
+│   │   └── settings.ts
+│   ├── handlers/            # Service-specific handlers
+│   │   ├── factory.ts       # createHandler() with feature composition
+│   │   ├── disney.ts
+│   │   └── hbomax.ts
+│   ├── settings/            # Options page
+│   │   ├── index.ts
+│   │   └── settings.css
+│   └── types/               # Shared type definitions
+│       └── index.ts
+├── vite.config.ts           # Vite build configuration
+├── tsconfig.json            # TypeScript configuration
+└── manifest.json            # Extension manifest (old, kept for reference)
 ```
 
 ## Adding New Streaming Services
 
-1. Create new handler in `handlers/` folder (e.g., `netflix.js`)
-2. Use `window.StreamKeys.createHandler(config)` with service-specific config
-3. Add URL matching in `main.js` router
-4. Add host permissions in `manifest.json`
-5. Add handler file to `Makefile` PACKAGE_FILES list
-6. Create service-specific Cursor rules file
+1. Create new handler in `src/handlers/` folder (e.g., `netflix.ts`)
+2. Use `createHandler(config)` with service-specific config and feature flags
+3. Add URL matching in `src/background/index.ts` router
+4. Add host permissions in `src/manifest.json`
+5. Create service-specific Cursor rules file in `src/handlers/.cursor/rules/`
 
-## Base Handler Configuration
+## Handler Configuration with Feature Flags
 
 Service handlers provide a config object to `createHandler()`:
 
-```javascript
-window.StreamKeys.createHandler({
+```typescript
+createHandler({
   name: 'Service Name',
-  getPlayer: () => { /* return player element */ },
+  getPlayer: () => document.querySelector('.player'),
   getButton: (keyCode) => { /* return button for key */ },
   setupPlayerFocus: (player) => { /* optional: custom focus logic */ },
   onPlayerSetup: (player) => { /* optional: called on player setup */ },
@@ -48,51 +76,49 @@ window.StreamKeys.createHandler({
     getCurrentState: () => { /* return true if subtitles on */ },
     turnOff: () => { /* click off option */ },
     selectLanguage: (item) => { /* click language option */ }
+  },
+  // Feature flags (all true by default)
+  features: {
+    subtitles: true,
+    restorePosition: true,
+    keyboard: true,
+    fullscreenOverlay: true
   }
 });
 ```
 
 ## Settings & Storage
 
-- Settings stored in `chrome.storage.sync` under key `subtitleLanguages`
+- Settings stored in `chrome.storage.sync` under keys:
+  - `subtitleLanguages`: string[]
+  - `positionHistoryEnabled`: boolean
 - Default languages: `['English', 'English [CC]', 'English CC']`
 - Settings injected as `window.__streamKeysSettings` before handlers load
-- Access in handlers via `window.__streamKeysSettings.subtitleLanguages`
+- Access in handlers via `window.__streamKeysSettings`
 
-## Keyboard Event Capture Strategy
+## TypeScript Conventions
 
-1. Use `window.addEventListener('keydown', handler, true)` - the capture phase (`true`) intercepts events before they reach other handlers
-2. `window` is preferred over `document` as it's higher in the capture chain
-3. Also attach listener to `document.fullscreenElement` when in fullscreen mode
-4. Attach listener directly to the player element as additional fallback
-
-## Browser Security: Fullscreen Exit Focus Issue
-
-**Problem:** After exiting fullscreen, browsers require "user activation" (a real click) before routing keyboard events to the page. This is a security feature that cannot be bypassed with JavaScript - `element.focus()`, synthetic events, and other tricks do not satisfy this requirement.
-
-**Solution:** Create an invisible full-page overlay after fullscreen exit that captures the user's first click:
-- Overlay covers entire viewport with `z-index: 2147483647`
-- Completely transparent so user doesn't notice
-- Captures click, removes itself, then focuses the player
-- Click doesn't propagate to video (avoids unwanted pause/play)
-
-## Script Injection
-
-The background script injects in this order:
-1. Settings as global variable (`window.__streamKeysSettings`)
-2. Base handler (`handlers/base.js`)
-3. Service-specific handler
-
-All injected into MAIN world to share context with the streaming service's scripts.
+- Use strict mode
+- Export types from `@/types`
+- Use CSS variables from `@/ui/styles/variables`
+- Prefer `const` assertions for configuration objects
 
 ## Logging Convention
 
 - `console.info('[StreamKeys] ...')` - Extension loaded messages
 - `console.warn('[StreamKeys] ...')` - Button not found or other recoverable issues
 
-## Build System
+## Build Commands
 
-The `Makefile` contains hardcoded file paths in `PACKAGE_FILES`. When changing project structure or adding new required files, update these paths manually.
+- `npm run dev` - Watch mode for development
+- `npm run build` - Production build (Chrome)
+- `npm run build:firefox` - Firefox build (future)
+- `npm run typecheck` - Type checking without emit
+- `npm run lint` - Run ESLint
+- `npm run lint:fix` - Run ESLint with auto-fix
+- `npm run format` - Format code with Prettier
+- `npm run format:check` - Check formatting without changes
+- `npm run check` - Run all checks (typecheck + lint + format)
 
 ## Manifest Constraints
 

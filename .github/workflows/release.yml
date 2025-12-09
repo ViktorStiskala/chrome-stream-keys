@@ -15,13 +15,27 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Build package
-        run: make build
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build extension
+        run: npm run build
+
+      - name: Create zip package
+        run: |
+          cd build/chrome/extension
+          zip -r ../stream-keys-chrome.zip .
 
       - name: Extract and verify version
         id: version
         run: |
-          MANIFEST_VERSION=$(jq -r '.version' manifest.json)
+          MANIFEST_VERSION=$(jq -r '.version' src/manifest.json)
           TAG_VERSION=${GITHUB_REF#refs/tags/v}
           echo "manifest_version=$MANIFEST_VERSION" >> $GITHUB_OUTPUT
           echo "tag_version=$TAG_VERSION" >> $GITHUB_OUTPUT
@@ -34,6 +48,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: v${{ steps.version.outputs.manifest_version }}
-          files: build/stream-keys.zip
+          files: build/chrome/stream-keys-chrome.zip
           generate_release_notes: true
-

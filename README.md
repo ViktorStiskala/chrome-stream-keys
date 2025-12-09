@@ -65,22 +65,43 @@ This extension intercepts keyboard events at the highest level and redirects the
 ### From Source
 
 1. Clone or download this repository
-2. Open Chrome and navigate to `chrome://extensions/`
-3. Enable "Developer mode" in the top right
-4. Click "Load unpacked" and select the extension folder
+2. Install dependencies: `npm install`
+3. Build the extension: `npm run build`
+4. Open Chrome and navigate to `chrome://extensions/`
+5. Enable "Developer mode" in the top right
+6. Click "Load unpacked" and select the `build/chrome/extension` folder
 
 ### Building
 
 ```bash
-make build    # Creates build/stream-keys.zip
-make clean    # Removes build directory
+npm install   # Install dependencies
+npm run build # Build extension to build/chrome/extension/
+```
+
+### Development
+
+```bash
+npm run dev          # Watch mode - rebuilds on file changes
+npm run build        # Production build
+npm run typecheck    # TypeScript type checking
+npm run lint         # Run ESLint
+npm run lint:fix     # Run ESLint with auto-fix
+npm run format       # Format code with Prettier
+npm run format:check # Check code formatting
+npm run check        # Run all checks (typecheck + lint + format)
 ```
 
 ## How It Works
 
 ### Architecture
 
-The extension uses a base handler (`handlers/base.js`) with shared functionality, and service-specific handlers that provide configuration for each streaming service.
+The extension is built with TypeScript and Vite. It uses a modular architecture with composable features:
+
+- **`src/handlers/`** - Service-specific handlers (Disney+, HBO Max) that configure the handler factory
+- **`src/features/`** - Independent feature modules (restore-position, subtitles, keyboard)
+- **`src/core/`** - Core utilities (focus, fullscreen, player, video, settings)
+- **`src/ui/`** - UI components (banner notifications, click overlay, CSS variables)
+- **`src/background/`** - Service worker that routes to appropriate handlers based on URL
 
 ### Keyboard Event Capture
 

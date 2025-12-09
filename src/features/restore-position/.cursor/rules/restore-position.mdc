@@ -1,0 +1,68 @@
+---
+description: Position Restore Feature - History and Dialog
+globs:
+  - "**/restore-position/**/*.ts"
+---
+
+# Position Restore Feature Notes
+
+## Position History Algorithm
+
+### State Management
+- `positionHistory`: Array of { time, label, savedAt } entries
+- `loadTimePosition`: Position when video first loaded (captured after initial resume)
+- `SEEK_MAX_HISTORY`: Maximum entries to keep (3)
+- `SEEK_MIN_DIFF_SECONDS`: Minimum difference between saved positions (15 seconds)
+
+### Debounce Logic for Seeks
+- `SEEK_DEBOUNCE_MS`: 5 seconds window for grouping rapid seeks
+- Only the position before the FIRST seek in a sequence is saved
+- Keyboard/button seeks use debouncing, timeline clicks save immediately
+- Flag `isKeyboardOrButtonSeek` distinguishes seek sources
+
+### Position Recording Rules
+1. Don't save positions < 15 seconds into video
+2. Don't save if too close to load time position
+3. Don't save if too close to ANY existing saved position
+4. Timeline clicks bypass debounce logic
+
+## Load Time Position Capture
+
+Capture happens on `canplay`, `playing`, or `seeked` events:
+1. Wait 1 second for player to settle
+2. Only capture if position >= 15 seconds
+3. Mark video ready for tracking after 500ms delay (avoids recording initial resume seek)
+
+## Dialog State Management
+
+### Toggle Behavior
+- Pressing R when dialog is open closes it
+- Pressing R when closed opens it
+- ESC key closes dialog and prevents fullscreen exit
+
+### Key Handling in Dialog
+- Number keys 0-3 select corresponding position
+- R or ESC closes dialog
+- Modifier keys (Cmd, Ctrl) pass through for browser shortcuts
+
+### Real-time Updates
+- Current time display updates every 300ms
+- Relative time ("2m 30s ago") updates live
+- Use `tabular-nums` for stable number widths
+
+## Video Time Tracking
+
+Use `requestAnimationFrame` for accurate pre-seek position capture:
+```typescript
+const track = () => {
+  if (video && !video.seeking) {
+    video._lastKnownTime = video.currentTime;
+  }
+  requestAnimationFrame(track);
+};
+```
+
+Store tracking state on video element:
+- `video._lastKnownTime`: Last known position before seek
+- `video._streamKeysSeekListenerAdded`: Prevents duplicate listeners
+- `video._streamKeysReadyForTracking`: True after initial load complete
