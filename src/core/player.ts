@@ -32,9 +32,9 @@ export function setupPlayer(config: PlayerSetupConfig, state: PlayerState): void
   }
 
   // Add mousemove listener for focus restoration
-  if (!player._mouseListenerAdded) {
+  if (!player._streamKeysMouseListenerAdded) {
     player.addEventListener('mousemove', config.onMouseMove);
-    player._mouseListenerAdded = true;
+    player._streamKeysMouseListenerAdded = true;
   }
 }
 

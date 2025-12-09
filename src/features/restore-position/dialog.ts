@@ -105,29 +105,12 @@ function createPositionItem(
 }
 
 /**
- * Get the actual playback time for display.
- * Uses custom getPlaybackTime if provided, otherwise falls back to video.currentTime.
- */
-function getDisplayTime(
-  video: StreamKeysVideoElement | null,
-  getPlaybackTime?: () => number | null
-): number {
-  if (getPlaybackTime) {
-    const customTime = getPlaybackTime();
-    if (customTime !== null) {
-      return customTime;
-    }
-  }
-  return video?.currentTime ?? 0;
-}
-
-/**
- * Create the restore dialog
+ * Create the restore dialog.
+ * Uses the video's _streamKeysGetPlaybackTime() method for current time display.
  */
 export function createRestoreDialog(
   historyState: PositionHistoryState,
-  getVideoElement: () => StreamKeysVideoElement | null,
-  getPlaybackTime?: () => number | null
+  getVideoElement: () => StreamKeysVideoElement | null
 ): void {
   // Toggle behavior - close if already open
   if (restoreDialog) {
@@ -230,7 +213,8 @@ export function createRestoreDialog(
     const currentVideo = getVideoElement();
     const currentTimeEl = document.getElementById(CURRENT_TIME_ID);
     if (currentTimeEl) {
-      const displayTime = getDisplayTime(currentVideo, getPlaybackTime);
+      const displayTime =
+        currentVideo?._streamKeysGetPlaybackTime?.() ?? currentVideo?.currentTime ?? 0;
       currentTimeEl.textContent = formatTime(displayTime);
     }
 
@@ -253,8 +237,7 @@ export function createRestoreDialog(
 export function handleRestoreDialogKeys(
   e: KeyboardEvent,
   historyState: PositionHistoryState,
-  getVideoElement: () => StreamKeysVideoElement | null,
-  _getPlaybackTime?: () => number | null
+  getVideoElement: () => StreamKeysVideoElement | null
 ): boolean {
   if (!restoreDialog) return false;
 

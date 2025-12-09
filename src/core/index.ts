@@ -2,7 +2,7 @@
 
 export { debug } from './debug';
 export { getSettings, getSubtitlePreferences, isPositionHistoryEnabled } from './settings';
-export { getVideoElement, formatTime, formatRelativeTime } from './video';
+export { createVideoGetter, formatTime, formatRelativeTime, type VideoGetterConfig } from './video';
 export { focusPlayer, createMouseMoveHandler, type FocusConfig } from './focus';
 export {
   getFullscreenElement,

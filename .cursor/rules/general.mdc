@@ -5,6 +5,11 @@ alwaysApply: true
 
 # StreamKeys Extension Development Notes
 
+## IMPORTANT: Cursor rules
+This project uses cursor rules located under `.cursor/rules/*.mdc` and nested rules in `src/` folder for individual
+modules. **Always check and update** relevant rule files after introducing changes, to make sure they contain relevant
+information, and crucial rules for new code.
+
 ## IMPORTANT: Code Quality Requirements
 
 **After ANY code change, you MUST run linters and fix all issues before the task is complete.**

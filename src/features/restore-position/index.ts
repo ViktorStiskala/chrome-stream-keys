@@ -1,8 +1,7 @@
 // Restore Position feature - main module
 
-import type { CleanupFn } from '@/types';
+import type { CleanupFn, StreamKeysVideoElement } from '@/types';
 import { isPositionHistoryEnabled } from '@/core/settings';
-import { getVideoElement as getVideo } from '@/core/video';
 import {
   createPositionHistoryState,
   recordPositionBeforeSeek,
@@ -17,11 +16,8 @@ import {
 } from './dialog';
 
 export interface RestorePositionConfig {
-  getPlayer: () => HTMLElement | null;
-  /** Custom video element selector for services with multiple video elements */
-  getVideo?: () => HTMLVideoElement | null;
-  /** Custom playback time getter for services where video.currentTime is unreliable */
-  getPlaybackTime?: () => number | null;
+  /** Get the augmented video element (with _streamKeysGetPlaybackTime method) */
+  getVideoElement: () => StreamKeysVideoElement | null;
 }
 
 export interface RestorePositionAPI {
@@ -51,13 +47,13 @@ export function initRestorePosition(config: RestorePositionConfig): RestorePosit
   let videoCleanup: CleanupFn | null = null;
   let earlySetupInterval: ReturnType<typeof setInterval> | null = null;
 
-  const getVideoElement = () => getVideo(config.getPlayer, config.getVideo);
+  const { getVideoElement } = config;
 
   // Setup video listeners
   const setupVideoListeners = () => {
     const video = getVideoElement();
     if (video && !video._streamKeysSeekListenerAdded) {
-      videoCleanup = setupVideoTracking(video, state, getVideoElement, config.getPlaybackTime);
+      videoCleanup = setupVideoTracking(video, state, getVideoElement);
     }
   };
 
@@ -66,7 +62,7 @@ export function initRestorePosition(config: RestorePositionConfig): RestorePosit
     setupVideoListeners();
     const video = getVideoElement();
     if (video && !video.seeking) {
-      video._lastKnownTime = video.currentTime;
+      video._streamKeysLastKnownTime = video._streamKeysGetPlaybackTime?.() ?? video.currentTime;
     }
   };
 
@@ -90,7 +86,7 @@ export function initRestorePosition(config: RestorePositionConfig): RestorePosit
   return {
     openDialog: () => {
       if (isPositionHistoryEnabled()) {
-        createRestoreDialog(state, getVideoElement, config.getPlaybackTime);
+        createRestoreDialog(state, getVideoElement);
       }
     },
     closeDialog: closeRestoreDialog,
@@ -102,7 +98,7 @@ export function initRestorePosition(config: RestorePositionConfig): RestorePosit
       state.isKeyboardOrButtonSeek = value;
     },
     handleDialogKeys: (e) => {
-      return handleRestoreDialogKeys(e, state, getVideoElement, config.getPlaybackTime);
+      return handleRestoreDialogKeys(e, state, getVideoElement);
     },
     getState: () => state,
     cleanup: () => {

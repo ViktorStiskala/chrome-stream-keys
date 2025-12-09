@@ -1,13 +1,13 @@
 // Keyboard feature - global key event handling
 
-import type { CleanupFn } from '@/types';
+import type { CleanupFn, StreamKeysVideoElement } from '@/types';
 import { isPositionHistoryEnabled } from '@/core/settings';
-import { getVideoElement } from '@/core/video';
 import type { RestorePositionAPI } from '@/features/restore-position';
 import type { SubtitlesAPI } from '@/features/subtitles';
 
 export interface KeyboardConfig {
-  getPlayer: () => HTMLElement | null;
+  /** Get the augmented video element (with _streamKeysGetPlaybackTime method) */
+  getVideoElement: () => StreamKeysVideoElement | null;
   getButton?: (keyCode: string) => HTMLElement | null;
   restorePosition?: RestorePositionAPI;
   subtitles?: SubtitlesAPI;
@@ -24,9 +24,7 @@ export interface KeyboardAPI {
  * Initialize the Keyboard feature
  */
 export function initKeyboard(config: KeyboardConfig): KeyboardAPI {
-  const { getPlayer, getButton, restorePosition, subtitles } = config;
-
-  const getVideo = () => getVideoElement(getPlayer);
+  const { getVideoElement, getButton, restorePosition, subtitles } = config;
 
   const handleGlobalKeys = (e: KeyboardEvent) => {
     // Handle restore dialog keys first - must capture ESC before it exits fullscreen
@@ -77,9 +75,10 @@ export function initKeyboard(config: KeyboardConfig): KeyboardAPI {
     // Record position before keyboard skip actions (debounced)
     if ((e.code === 'ArrowLeft' || e.code === 'ArrowRight') && restorePosition) {
       restorePosition.setKeyboardSeek(true);
-      const video = getVideo();
-      if (video) {
-        restorePosition.recordBeforeSeek(video.currentTime);
+      const video = getVideoElement();
+      const currentTime = video?._streamKeysGetPlaybackTime?.() ?? video?.currentTime;
+      if (currentTime !== undefined) {
+        restorePosition.recordBeforeSeek(currentTime);
       }
       // Reset flag after seek completes
       setTimeout(() => restorePosition.setKeyboardSeek(false), 500);

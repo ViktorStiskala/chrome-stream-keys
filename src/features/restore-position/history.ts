@@ -124,13 +124,13 @@ export function getRestorePositions(state: PositionHistoryState): RestorePositio
 }
 
 /**
- * Set up video time tracking for position capture
+ * Set up video time tracking for position capture.
+ * Uses the video's _streamKeysGetPlaybackTime() method for accurate time tracking.
  */
 export function setupVideoTracking(
   video: StreamKeysVideoElement,
   state: PositionHistoryState,
-  getVideoElement: () => StreamKeysVideoElement | null,
-  getPlaybackTime?: () => number | null
+  getVideoElement: () => StreamKeysVideoElement | null
 ): () => void {
   if (video._streamKeysSeekListenerAdded) {
     return () => {};
@@ -140,38 +140,30 @@ export function setupVideoTracking(
   video._streamKeysReadyForTracking = false;
 
   /**
-   * Get the actual playback time.
-   * Uses custom getPlaybackTime if provided (for services where video.currentTime is unreliable),
-   * otherwise falls back to video.currentTime.
+   * Get the actual playback time using the video's augmented method.
    */
   const getActualPlaybackTime = (v: StreamKeysVideoElement): number => {
-    if (getPlaybackTime) {
-      const customTime = getPlaybackTime();
-      if (customTime !== null) {
-        return customTime;
-      }
-    }
-    return v.currentTime;
+    return v._streamKeysGetPlaybackTime?.() ?? v.currentTime;
   };
 
   // Handle seeking events
   const handleSeeking = () => {
     if (!isPositionHistoryEnabled()) return;
 
-    if (video._lastKnownTime !== undefined && video._streamKeysReadyForTracking) {
+    if (video._streamKeysLastKnownTime !== undefined && video._streamKeysReadyForTracking) {
       if (state.isKeyboardOrButtonSeek) {
         // Keyboard seeks are handled by recordPositionBeforeSeek with debouncing
         return;
       }
       // UI buttons and timeline clicks: save immediately
-      savePositionToHistory(state, video._lastKnownTime);
+      savePositionToHistory(state, video._streamKeysLastKnownTime);
     }
   };
 
   // Track time updates - use actual playback time for streaming services
   const handleTimeUpdate = () => {
     if (!video.seeking) {
-      video._lastKnownTime = getActualPlaybackTime(video);
+      video._streamKeysLastKnownTime = getActualPlaybackTime(video);
     }
   };
 
@@ -211,7 +203,7 @@ export function setupVideoTracking(
 
   // Initialize if video is already loaded
   if (video.readyState >= 1) {
-    video._lastKnownTime = getActualPlaybackTime(video);
+    video._streamKeysLastKnownTime = getActualPlaybackTime(video);
   }
   if (video.readyState >= 3) {
     captureLoadTimeOnce();
@@ -224,7 +216,7 @@ export function setupVideoTracking(
   const track = () => {
     const currentVideo = getVideoElement();
     if (currentVideo && !currentVideo.seeking) {
-      currentVideo._lastKnownTime = getActualPlaybackTime(currentVideo);
+      currentVideo._streamKeysLastKnownTime = getActualPlaybackTime(currentVideo);
     }
     trackingFrame = requestAnimationFrame(track);
   };

@@ -58,16 +58,18 @@ declare global {
 
 // Video element with StreamKeys tracking properties
 export interface StreamKeysVideoElement extends HTMLVideoElement {
-  _lastKnownTime?: number;
+  _streamKeysLastKnownTime?: number;
   _streamKeysSeekListenerAdded?: boolean;
   _streamKeysReadyForTracking?: boolean;
   _streamKeysPlaybackStarted?: boolean;
-  _mouseListenerAdded?: boolean;
+  _streamKeysMouseListenerAdded?: boolean;
+  /** Get actual playback time (uses custom logic if available, else video.currentTime) */
+  _streamKeysGetPlaybackTime?: () => number;
 }
 
 // Player element with StreamKeys properties
 export interface StreamKeysPlayerElement extends HTMLElement {
-  _mouseListenerAdded?: boolean;
+  _streamKeysMouseListenerAdded?: boolean;
 }
 
 // Key codes for keyboard handling

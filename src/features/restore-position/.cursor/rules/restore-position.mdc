@@ -56,13 +56,14 @@ Use `requestAnimationFrame` for accurate pre-seek position capture:
 ```typescript
 const track = () => {
   if (video && !video.seeking) {
-    video._lastKnownTime = video.currentTime;
+    video._streamKeysLastKnownTime = video._streamKeysGetPlaybackTime?.() ?? video.currentTime;
   }
   requestAnimationFrame(track);
 };
 ```
 
 Store tracking state on video element:
-- `video._lastKnownTime`: Last known position before seek
+- `video._streamKeysLastKnownTime`: Last known position before seek
+- `video._streamKeysGetPlaybackTime()`: Method that returns actual playback time (uses custom logic if available)
 - `video._streamKeysSeekListenerAdded`: Prevents duplicate listeners
 - `video._streamKeysReadyForTracking`: True after initial load complete

@@ -3,6 +3,15 @@
 import type { StreamKeysVideoElement } from '@/types';
 
 /**
+ * Configuration for creating a video element getter
+ */
+export interface VideoGetterConfig {
+  getPlayer: () => HTMLElement | null;
+  getVideo?: () => HTMLVideoElement | null;
+  getPlaybackTime?: () => number | null;
+}
+
+/**
  * Check if a video element is likely the active/playing video
  */
 function isActiveVideo(video: HTMLVideoElement): boolean {
@@ -17,55 +26,90 @@ function isActiveVideo(video: HTMLVideoElement): boolean {
 }
 
 /**
- * Get the video element from the player or page.
- * If a custom getVideo function is provided (from handler config), use it first.
+ * Augment a video element with StreamKeys methods.
+ * Adds _streamKeysGetPlaybackTime() which uses custom logic if available.
  */
-export function getVideoElement(
-  getPlayer: () => HTMLElement | null,
-  customGetVideo?: () => HTMLVideoElement | null
-): StreamKeysVideoElement | null {
-  // Try custom getter first (service-specific video selection)
-  if (customGetVideo) {
-    const video = customGetVideo();
-    if (video) {
-      return video as StreamKeysVideoElement;
+function augmentVideoElement(
+  video: HTMLVideoElement,
+  customGetPlaybackTime?: () => number | null
+): StreamKeysVideoElement {
+  const augmented = video as StreamKeysVideoElement;
+
+  // Only augment once
+  if (!augmented._streamKeysGetPlaybackTime) {
+    augmented._streamKeysGetPlaybackTime = () => {
+      if (customGetPlaybackTime) {
+        const time = customGetPlaybackTime();
+        if (time !== null) return time;
+      }
+      return video.currentTime;
+    };
+  }
+
+  return augmented;
+}
+
+/**
+ * Find a video element using fallback logic within the player
+ */
+function findVideoInPlayer(player: HTMLElement): HTMLVideoElement | null {
+  const allVideos = player.querySelectorAll('video');
+
+  // Priority 1: Look for video that appears to be active (visible, has duration, has src)
+  for (const video of allVideos) {
+    if (isActiveVideo(video)) {
+      return video;
     }
   }
 
-  // Try to find video element within the player
-  const player = getPlayer();
-  if (player) {
-    const allVideos = player.querySelectorAll('video');
-
-    // Priority 1: Look for video that appears to be active (visible, has duration, has src)
-    for (const video of allVideos) {
-      if (isActiveVideo(video)) {
-        return video as StreamKeysVideoElement;
-      }
-    }
-
-    // Priority 2: Video with src and visible (display not none)
-    for (const video of allVideos) {
-      if (video.src && video.style.display !== 'none') {
-        return video as StreamKeysVideoElement;
-      }
-    }
-
-    // Priority 3: Any video with src
-    for (const video of allVideos) {
-      if (video.src) {
-        return video as StreamKeysVideoElement;
-      }
-    }
-
-    // Last fallback: first video
-    const video = player.querySelector('video');
-    if (video) {
-      return video as StreamKeysVideoElement;
+  // Priority 2: Video with src and visible (display not none)
+  for (const video of allVideos) {
+    if (video.src && video.style.display !== 'none') {
+      return video;
     }
   }
-  // Fallback: find any video on the page
-  return document.querySelector('video') as StreamKeysVideoElement | null;
+
+  // Priority 3: Any video with src
+  for (const video of allVideos) {
+    if (video.src) {
+      return video;
+    }
+  }
+
+  // Last fallback: first video
+  return player.querySelector('video');
+}
+
+/**
+ * Create a video element getter with custom behavior baked in.
+ * The returned function finds the video and augments it with _streamKeysGetPlaybackTime.
+ */
+export function createVideoGetter(config: VideoGetterConfig): () => StreamKeysVideoElement | null {
+  return () => {
+    let video: HTMLVideoElement | null = null;
+
+    // If custom getter is provided, use it exclusively (don't fall back to generic detection)
+    // This prevents issues with services like Disney+ that have multiple video elements
+    if (config.getVideo) {
+      video = config.getVideo();
+    } else {
+      // Try to find video element within the player
+      const player = config.getPlayer();
+      if (player) {
+        video = findVideoInPlayer(player);
+      }
+
+      // Fallback: find any video on the page
+      if (!video) {
+        video = document.querySelector('video');
+      }
+    }
+
+    if (video) {
+      return augmentVideoElement(video, config.getPlaybackTime);
+    }
+    return null;
+  };
 }
 
 /**

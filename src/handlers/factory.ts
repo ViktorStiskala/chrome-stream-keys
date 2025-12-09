@@ -7,6 +7,7 @@ import {
   setupFullscreenListeners,
   setupPlayer,
   createPlayerSetupInterval,
+  createVideoGetter,
   type FullscreenState,
   type PlayerState,
 } from '@/core';
@@ -35,16 +36,19 @@ export function createHandler(config: HandlerConfig): HandlerAPI {
     fullscreenOverlay: config.features?.fullscreenOverlay !== false,
   };
 
+  // Create video getter once - all features share this
+  const getVideoElement = createVideoGetter({
+    getPlayer: config.getPlayer,
+    getVideo: config.getVideo,
+    getPlaybackTime: config.getPlaybackTime,
+  });
+
   // Initialize features
   let restorePositionAPI: RestorePositionAPI | undefined;
   let subtitlesAPI: SubtitlesAPI | undefined;
 
   if (features.restorePosition) {
-    restorePositionAPI = initRestorePosition({
-      getPlayer: config.getPlayer,
-      getVideo: config.getVideo,
-      getPlaybackTime: config.getPlaybackTime,
-    });
+    restorePositionAPI = initRestorePosition({ getVideoElement });
     cleanupFns.push(restorePositionAPI.cleanup);
   }
 
@@ -60,7 +64,7 @@ export function createHandler(config: HandlerConfig): HandlerAPI {
 
   if (features.keyboard) {
     const keyboardAPI = initKeyboard({
-      getPlayer: config.getPlayer,
+      getVideoElement,
       getButton: config.getButton,
       restorePosition: restorePositionAPI,
       subtitles: subtitlesAPI,
