@@ -1,11 +1,11 @@
 // Restore Position dialog UI
 
 import type { StreamKeysVideoElement } from '@/types';
-import { showBanner } from '@/ui/banner';
-import { formatTime, formatRelativeTime } from '@/core/video';
-import { cssVars } from '@/ui/styles/variables';
-import { dialogStyles } from './styles';
-import { type PositionHistoryState, type RestorePosition, getRestorePositions } from './history';
+import { Banner } from '@/ui/banner';
+import { Video } from '@/core/video';
+import { Styles } from '@/ui/styles/variables';
+import { DialogStyles } from './styles';
+import { PositionHistory, type PositionHistoryState, type RestorePosition } from './history';
 
 const DIALOG_ID = 'streamkeys-restore-dialog';
 const CURRENT_TIME_ID = 'streamkeys-current-time';
@@ -17,7 +17,7 @@ let dialogUpdateInterval: ReturnType<typeof setInterval> | null = null;
 /**
  * Close the restore dialog
  */
-export function closeRestoreDialog(): void {
+function closeRestoreDialog(): void {
   if (dialogUpdateInterval) {
     clearInterval(dialogUpdateInterval);
     dialogUpdateInterval = null;
@@ -31,17 +31,17 @@ export function closeRestoreDialog(): void {
 /**
  * Check if dialog is currently open
  */
-export function isDialogOpen(): boolean {
+function isDialogOpen(): boolean {
   return restoreDialog !== null;
 }
 
 /**
  * Restore video to a specific position
  */
-export function restorePosition(video: StreamKeysVideoElement | null, time: number): void {
+function restorePosition(video: StreamKeysVideoElement | null, time: number): void {
   if (video) {
     video.currentTime = time;
-    showBanner(`Restored to ${formatTime(time)}`);
+    Banner.show(`Restored to ${Video.formatTime(time)}`);
   }
 }
 
@@ -55,20 +55,20 @@ function createPositionItem(
   onClick: () => void
 ): HTMLButtonElement {
   const item = document.createElement('button');
-  item.style.cssText = dialogStyles.positionItem;
+  item.style.cssText = DialogStyles.positionItem;
 
-  item.onmouseenter = () => (item.style.background = cssVars.overlay.bgHover);
-  item.onmouseleave = () => (item.style.background = cssVars.overlay.bgActive);
+  item.onmouseenter = () => (item.style.background = Styles.vars.overlay.bgHover);
+  item.onmouseleave = () => (item.style.background = Styles.vars.overlay.bgActive);
 
   // Key hint
   const keyHint = document.createElement('span');
   keyHint.textContent = `${keyNumber}`;
-  keyHint.style.cssText = dialogStyles.keyHint;
+  keyHint.style.cssText = DialogStyles.keyHint;
 
   // Time label
   const timeLabel = document.createElement('span');
   timeLabel.textContent = pos.label;
-  timeLabel.style.cssText = dialogStyles.timeLabel;
+  timeLabel.style.cssText = DialogStyles.timeLabel;
 
   // Relative time
   const relativeTime = document.createElement('span');
@@ -78,15 +78,15 @@ function createPositionItem(
   } else {
     relativeTime.textContent = pos.relativeText as string;
   }
-  relativeTime.style.cssText = dialogStyles.relativeTime;
+  relativeTime.style.cssText = DialogStyles.relativeTime;
 
   // Progress bar
   const progressBar = document.createElement('div');
   const progressPercent = videoDuration > 0 ? (pos.time / videoDuration) * 100 : 0;
-  progressBar.style.cssText = dialogStyles.progressBar;
+  progressBar.style.cssText = DialogStyles.progressBar;
 
   const progressFill = document.createElement('div');
-  progressFill.style.cssText = dialogStyles.progressFill;
+  progressFill.style.cssText = DialogStyles.progressFill;
   progressFill.style.width = `${progressPercent}%`;
   progressBar.appendChild(progressFill);
 
@@ -108,7 +108,7 @@ function createPositionItem(
  * Create the restore dialog.
  * Uses the video's _streamKeysGetPlaybackTime() method for current time display.
  */
-export function createRestoreDialog(
+function createRestoreDialog(
   historyState: PositionHistoryState,
   getVideoElement: () => StreamKeysVideoElement | null
 ): void {
@@ -118,11 +118,11 @@ export function createRestoreDialog(
     return;
   }
 
-  const allPositions = getRestorePositions(historyState);
+  const allPositions = PositionHistory.getPositions(historyState);
 
   // Show message if no positions available
   if (allPositions.length === 0) {
-    showBanner('No saved positions');
+    Banner.show('No saved positions');
     return;
   }
 
@@ -131,21 +131,21 @@ export function createRestoreDialog(
 
   restoreDialog = document.createElement('div');
   restoreDialog.id = DIALOG_ID;
-  restoreDialog.style.cssText = dialogStyles.container;
+  restoreDialog.style.cssText = DialogStyles.container;
 
   // Header
   const header = document.createElement('div');
-  header.style.cssText = dialogStyles.header;
+  header.style.cssText = DialogStyles.header;
 
   const title = document.createElement('div');
   title.textContent = 'Restore Position';
-  title.style.cssText = dialogStyles.title;
+  title.style.cssText = DialogStyles.title;
 
   const closeButton = document.createElement('button');
   closeButton.textContent = '×';
-  closeButton.style.cssText = dialogStyles.closeButton;
-  closeButton.onmouseenter = () => (closeButton.style.color = cssVars.text.primary);
-  closeButton.onmouseleave = () => (closeButton.style.color = cssVars.text.secondary);
+  closeButton.style.cssText = DialogStyles.closeButton;
+  closeButton.onmouseenter = () => (closeButton.style.color = Styles.vars.text.primary);
+  closeButton.onmouseleave = () => (closeButton.style.color = Styles.vars.text.secondary);
   closeButton.onclick = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -158,15 +158,15 @@ export function createRestoreDialog(
 
   // Current time display
   const currentTimeContainer = document.createElement('div');
-  currentTimeContainer.style.cssText = dialogStyles.currentTimeContainer;
+  currentTimeContainer.style.cssText = DialogStyles.currentTimeContainer;
 
   const currentTimeLabel = document.createElement('span');
   currentTimeLabel.textContent = 'Current time';
-  currentTimeLabel.style.cssText = dialogStyles.currentTimeLabel;
+  currentTimeLabel.style.cssText = DialogStyles.currentTimeLabel;
 
   const currentTimeValue = document.createElement('span');
   currentTimeValue.id = CURRENT_TIME_ID;
-  currentTimeValue.style.cssText = dialogStyles.currentTimeValue;
+  currentTimeValue.style.cssText = DialogStyles.currentTimeValue;
 
   currentTimeContainer.appendChild(currentTimeLabel);
   currentTimeContainer.appendChild(currentTimeValue);
@@ -174,7 +174,7 @@ export function createRestoreDialog(
 
   // Position list
   const list = document.createElement('div');
-  list.style.cssText = dialogStyles.list;
+  list.style.cssText = DialogStyles.list;
 
   const hasLoadTime = allPositions.length > 0 && allPositions[0].isLoadTime;
   const hasHistoryItems = allPositions.some((pos) => !pos.isLoadTime);
@@ -189,7 +189,7 @@ export function createRestoreDialog(
     // Add separator after load time if there are history items
     if (hasLoadTime && hasHistoryItems && index === 0) {
       const separator = document.createElement('div');
-      separator.style.cssText = dialogStyles.separator;
+      separator.style.cssText = DialogStyles.separator;
       list.appendChild(separator);
     }
   });
@@ -203,7 +203,7 @@ export function createRestoreDialog(
     maxKey === 0
       ? 'Press 0 to select, Esc or R to close'
       : `Press 0-${maxKey} to select, Esc or R to close`;
-  hint.style.cssText = dialogStyles.hint;
+  hint.style.cssText = DialogStyles.hint;
   restoreDialog.appendChild(hint);
 
   document.body.appendChild(restoreDialog);
@@ -214,26 +214,26 @@ export function createRestoreDialog(
     const currentTimeEl = document.getElementById(CURRENT_TIME_ID);
     if (currentTimeEl) {
       const displayTime = currentVideo?._streamKeysGetPlaybackTime?.() ?? 0;
-      currentTimeEl.textContent = formatTime(displayTime);
+      currentTimeEl.textContent = Video.formatTime(displayTime);
     }
 
     const relativeTimeEls = document.querySelectorAll('.streamkeys-relative-time');
     relativeTimeEls.forEach((el) => {
       const savedAt = parseInt((el as HTMLElement).dataset.savedAt || '0', 10);
       if (savedAt) {
-        el.textContent = formatRelativeTime(savedAt);
+        el.textContent = Video.formatRelativeTime(savedAt);
       }
     });
   };
 
   updateDialogTimes();
-  dialogUpdateInterval = setInterval(updateDialogTimes, cssVars.timing.dialogUpdate);
+  dialogUpdateInterval = setInterval(updateDialogTimes, Styles.vars.timing.dialogUpdate);
 }
 
 /**
  * Handle keyboard events for the dialog
  */
-export function handleRestoreDialogKeys(
+function handleRestoreDialogKeys(
   e: KeyboardEvent,
   historyState: PositionHistoryState,
   getVideoElement: () => StreamKeysVideoElement | null
@@ -265,7 +265,7 @@ export function handleRestoreDialogKeys(
     e.preventDefault();
     e.stopPropagation();
 
-    const allPositions = getRestorePositions(historyState);
+    const allPositions = PositionHistory.getPositions(historyState);
     const position = allPositions[keyNum];
 
     if (position) {
@@ -278,3 +278,12 @@ export function handleRestoreDialogKeys(
 
   return false;
 }
+
+// Public API
+export const RestoreDialog = {
+  create: createRestoreDialog,
+  close: closeRestoreDialog,
+  isOpen: isDialogOpen,
+  restore: restorePosition,
+  handleKeys: handleRestoreDialogKeys,
+};

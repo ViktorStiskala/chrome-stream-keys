@@ -16,7 +16,7 @@ export interface PlayerState {
 /**
  * Set up the player element with event listeners
  */
-export function setupPlayer(config: PlayerSetupConfig, state: PlayerState): void {
+function setupPlayer(config: PlayerSetupConfig, state: PlayerState): void {
   const player = config.getPlayer() as StreamKeysPlayerElement | null;
   if (!player) return;
 
@@ -41,7 +41,7 @@ export function setupPlayer(config: PlayerSetupConfig, state: PlayerState): void
 /**
  * Create a periodic player setup interval
  */
-export function createPlayerSetupInterval(
+function createPlayerSetupInterval(
   config: PlayerSetupConfig,
   state: PlayerState,
   intervalMs = 1000
@@ -52,3 +52,9 @@ export function createPlayerSetupInterval(
 
   return () => clearInterval(intervalId);
 }
+
+// Public API
+export const Player = {
+  setup: setupPlayer,
+  createSetupInterval: createPlayerSetupInterval,
+};

@@ -8,7 +8,7 @@ export interface FocusConfig {
 /**
  * Focus the player element if the document has focus
  */
-export function focusPlayer(config: FocusConfig): void {
+function focusPlayer(config: FocusConfig): void {
   const player = config.getPlayer();
   if (player && document.hasFocus()) {
     if (config.setupPlayerFocus) {
@@ -23,7 +23,7 @@ export function focusPlayer(config: FocusConfig): void {
 /**
  * Create a throttled mousemove handler to restore focus
  */
-export function createMouseMoveHandler(config: FocusConfig, throttleMs = 500): () => void {
+function createMouseMoveHandler(config: FocusConfig, throttleMs = 500): () => void {
   let lastMoveTime = 0;
 
   return () => {
@@ -33,3 +33,9 @@ export function createMouseMoveHandler(config: FocusConfig, throttleMs = 500): (
     focusPlayer(config);
   };
 }
+
+// Public API
+export const Focus = {
+  player: focusPlayer,
+  createMouseMoveHandler,
+};

@@ -45,11 +45,13 @@ Create a `createVideoGetter` factory that produces a configured video element ge
 In [`src/types/index.ts`](src/types/index.ts):
 
 **StreamKeysVideoElement:**
+
 - `_lastKnownTime` → `_streamKeysLastKnownTime`
 - `_mouseListenerAdded` → `_streamKeysMouseListenerAdded`
 - Add: `_streamKeysGetPlaybackTime?: () => number`
 
 **StreamKeysPlayerElement:**
+
 - `_mouseListenerAdded` → `_streamKeysMouseListenerAdded`
 
 ## 2. Create Video Getter Factory
@@ -122,14 +124,17 @@ keyboardAPI = initKeyboard({
 ## 4. Simplify Feature Interfaces
 
 **[`src/features/restore-position/index.ts`](src/features/restore-position/index.ts):**
+
 ```typescript
 export interface RestorePositionConfig {
   getVideoElement: () => StreamKeysVideoElement | null;
 }
 ```
+
 Remove `getPlayer`, `getVideo`, `getPlaybackTime`.
 
 **[`src/features/keyboard/index.ts`](src/features/keyboard/index.ts):**
+
 ```typescript
 export interface KeyboardConfig {
   getVideoElement: () => StreamKeysVideoElement | null;
@@ -138,6 +143,7 @@ export interface KeyboardConfig {
   subtitles?: SubtitlesAPI;
 }
 ```
+
 Remove `getPlayer`, `getVideo`, `getPlaybackTime`.
 
 ## 5. Use `_streamKeysGetPlaybackTime()` Method
@@ -152,16 +158,23 @@ Replace all direct time access with the method:
 ## 6. Rename All Property References
 
 | File | Old | New |
+
 |------|-----|-----|
+
 | `src/types/index.ts` | `_lastKnownTime` | `_streamKeysLastKnownTime` |
+
 | `src/types/index.ts` | `_mouseListenerAdded` | `_streamKeysMouseListenerAdded` |
+
 | `src/features/restore-position/index.ts` | `_lastKnownTime` | `_streamKeysLastKnownTime` |
+
 | `src/features/restore-position/history.ts` | `_lastKnownTime` (5x) | `_streamKeysLastKnownTime` |
+
 | `src/core/player.ts` | `_mouseListenerAdded` (2x) | `_streamKeysMouseListenerAdded` |
 
 ## 7. Update Exports
 
 In [`src/core/index.ts`](src/core/index.ts):
+
 - Export `createVideoGetter` and `VideoGetterConfig`
 - Remove `getVideoElement` export
 
@@ -170,14 +183,17 @@ In [`src/core/index.ts`](src/core/index.ts):
 Search codebase for any remaining references to removed/changed items:
 
 **Functions removed:**
+
 - `getVideoElement` from `@/core/video` - replaced by `createVideoGetter`
 - `getActualPlaybackTime` helpers in features
 
 **Parameters removed:**
+
 - `getPlaybackTime` parameter in `setupVideoTracking`, `createRestoreDialog`, `handleRestoreDialogKeys`
 - `getPlayer`, `getVideo`, `getPlaybackTime` in feature configs
 
 **Search patterns to verify cleanup:**
+
 ```
 grep -r "getVideoElement" src/
 grep -r "getActualPlaybackTime" src/
@@ -191,6 +207,7 @@ Update any outdated comments referencing old function signatures or removed para
 ## 9. Verify Build
 
 Run `npm run check` to ensure:
+
 - TypeScript compiles without errors
 - ESLint passes
 - Prettier formatting is correct

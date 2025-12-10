@@ -1,6 +1,6 @@
 // Shared CSS variables for StreamKeys UI components
 
-export const cssVars = {
+const cssVars = {
   overlay: {
     bg: 'rgba(0, 0, 0, 0.9)',
     bgLight: 'rgba(0, 0, 0, 0.6)',
@@ -52,7 +52,7 @@ export const cssVars = {
 } as const;
 
 // Helper to create CSS string from style object
-export function createStyleString(styles: Record<string, string | number>): string {
+function createStyleString(styles: Record<string, string | number>): string {
   return Object.entries(styles)
     .map(([key, value]) => {
       // Convert camelCase to kebab-case
@@ -61,3 +61,9 @@ export function createStyleString(styles: Record<string, string | number>): stri
     })
     .join(' ');
 }
+
+// Public API
+export const Styles = {
+  vars: cssVars,
+  createString: createStyleString,
+};

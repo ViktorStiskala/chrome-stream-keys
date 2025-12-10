@@ -1,4 +1,4 @@
 // Handlers barrel export
 
-export { createHandler } from './factory';
+export { Handler } from './factory';
 export type { HandlerConfig, HandlerAPI } from './types';

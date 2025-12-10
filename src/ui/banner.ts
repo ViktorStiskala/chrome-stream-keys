@@ -1,6 +1,6 @@
 // Banner notification utility
 
-import { cssVars } from './styles/variables';
+import { Styles } from './styles/variables';
 
 const BANNER_ID = 'streamkeys-banner';
 let bannerTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -8,7 +8,7 @@ let bannerTimeout: ReturnType<typeof setTimeout> | null = null;
 /**
  * Show a temporary banner notification overlay
  */
-export function showBanner(message: string): void {
+function showBanner(message: string): void {
   // Remove existing banner
   const existing = document.getElementById(BANNER_ID);
   if (existing) {
@@ -26,14 +26,14 @@ export function showBanner(message: string): void {
     bottom: 25%;
     left: 50%;
     transform: translateX(-50%);
-    background: ${cssVars.overlay.bgLight};
-    color: ${cssVars.text.primary};
-    padding: ${cssVars.spacing.xl} 40px;
-    border-radius: ${cssVars.borderRadius.xl};
-    font-family: ${cssVars.font.family};
-    font-size: ${cssVars.font.sizeXXLarge};
+    background: ${Styles.vars.overlay.bgLight};
+    color: ${Styles.vars.text.primary};
+    padding: ${Styles.vars.spacing.xl} 40px;
+    border-radius: ${Styles.vars.borderRadius.xl};
+    font-family: ${Styles.vars.font.family};
+    font-size: ${Styles.vars.font.sizeXXLarge};
     font-weight: 600;
-    z-index: ${cssVars.zIndex.max};
+    z-index: ${Styles.vars.zIndex.max};
     pointer-events: none;
     opacity: 1;
     transition: opacity 0.3s ease-out;
@@ -44,14 +44,14 @@ export function showBanner(message: string): void {
   // Fade out after delay
   bannerTimeout = setTimeout(() => {
     banner.style.opacity = '0';
-    setTimeout(() => banner.remove(), cssVars.timing.fadeTransition);
-  }, cssVars.timing.bannerFade);
+    setTimeout(() => banner.remove(), Styles.vars.timing.fadeTransition);
+  }, Styles.vars.timing.bannerFade);
 }
 
 /**
  * Clean up banner resources
  */
-export function cleanupBanner(): void {
+function cleanupBanner(): void {
   const existing = document.getElementById(BANNER_ID);
   if (existing) {
     existing.remove();
@@ -61,3 +61,9 @@ export function cleanupBanner(): void {
     bannerTimeout = null;
   }
 }
+
+// Public API
+export const Banner = {
+  show: showBanner,
+  cleanup: cleanupBanner,
+};

@@ -1,20 +1,11 @@
 // Handler factory - creates handlers with composable features
 
 import type { CleanupFn } from '@/types';
+import { Focus, Fullscreen, Player, Video, type FullscreenState, type PlayerState } from '@/core';
 import {
-  createMouseMoveHandler,
-  createFullscreenHandler,
-  setupFullscreenListeners,
-  setupPlayer,
-  createPlayerSetupInterval,
-  createVideoGetter,
-  type FullscreenState,
-  type PlayerState,
-} from '@/core';
-import {
-  initRestorePosition,
-  initSubtitles,
-  initKeyboard,
+  RestorePosition,
+  Subtitles,
+  Keyboard,
   type RestorePositionAPI,
   type SubtitlesAPI,
 } from '@/features';
@@ -23,7 +14,7 @@ import type { HandlerConfig, HandlerAPI } from './types';
 /**
  * Create a handler with composable features
  */
-export function createHandler(config: HandlerConfig): HandlerAPI {
+function createHandler(config: HandlerConfig): HandlerAPI {
   console.info(`[StreamKeys] ${config.name} extension loaded at ${new Date().toISOString()}`);
 
   const cleanupFns: CleanupFn[] = [];
@@ -37,7 +28,7 @@ export function createHandler(config: HandlerConfig): HandlerAPI {
   };
 
   // Create video getter once - all features share this
-  const getVideoElement = createVideoGetter({
+  const getVideoElement = Video.createGetter({
     getPlayer: config.getPlayer,
     getVideo: config.getVideo,
     getPlaybackTime: config.getPlaybackTime,
@@ -49,12 +40,12 @@ export function createHandler(config: HandlerConfig): HandlerAPI {
   let subtitlesAPI: SubtitlesAPI | undefined;
 
   if (features.restorePosition) {
-    restorePositionAPI = initRestorePosition({ getVideoElement });
+    restorePositionAPI = RestorePosition.init({ getVideoElement });
     cleanupFns.push(restorePositionAPI.cleanup);
   }
 
   if (features.subtitles && config.subtitles) {
-    subtitlesAPI = initSubtitles({
+    subtitlesAPI = Subtitles.init({
       subtitles: config.subtitles,
     });
     cleanupFns.push(subtitlesAPI.cleanup);
@@ -64,7 +55,7 @@ export function createHandler(config: HandlerConfig): HandlerAPI {
   let keyboardHandler: ((e: KeyboardEvent) => void) | undefined;
 
   if (features.keyboard) {
-    const keyboardAPI = initKeyboard({
+    const keyboardAPI = Keyboard.init({
       getVideoElement,
       getButton: config.getButton,
       restorePosition: restorePositionAPI,
@@ -81,7 +72,7 @@ export function createHandler(config: HandlerConfig): HandlerAPI {
   };
 
   // Create mouse move handler
-  const mouseMoveHandler = createMouseMoveHandler(focusConfig);
+  const mouseMoveHandler = Focus.createMouseMoveHandler(focusConfig);
 
   // Fullscreen handling
   if (features.fullscreenOverlay) {
@@ -90,7 +81,7 @@ export function createHandler(config: HandlerConfig): HandlerAPI {
       wasInFullscreen: false,
     };
 
-    const fullscreenHandler = createFullscreenHandler(
+    const fullscreenHandler = Fullscreen.createHandler(
       {
         ...focusConfig,
         getOverlayContainer: config.getOverlayContainer,
@@ -99,7 +90,7 @@ export function createHandler(config: HandlerConfig): HandlerAPI {
       keyboardHandler || (() => {})
     );
 
-    const cleanupFullscreen = setupFullscreenListeners(fullscreenHandler);
+    const cleanupFullscreen = Fullscreen.setupListeners(fullscreenHandler);
     cleanupFns.push(cleanupFullscreen);
   }
 
@@ -116,10 +107,10 @@ export function createHandler(config: HandlerConfig): HandlerAPI {
   };
 
   // Initial setup
-  setupPlayer(playerSetupConfig, playerState);
+  Player.setup(playerSetupConfig, playerState);
 
   // Periodic setup
-  const cleanupPlayerInterval = createPlayerSetupInterval(playerSetupConfig, playerState);
+  const cleanupPlayerInterval = Player.createSetupInterval(playerSetupConfig, playerState);
   cleanupFns.push(cleanupPlayerInterval);
 
   return {
@@ -128,3 +119,8 @@ export function createHandler(config: HandlerConfig): HandlerAPI {
     },
   };
 }
+
+// Public API
+export const Handler = {
+  create: createHandler,
+};

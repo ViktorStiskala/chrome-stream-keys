@@ -1,7 +1,7 @@
 // Keyboard feature - global key event handling
 
 import type { CleanupFn, StreamKeysVideoElement } from '@/types';
-import { isPositionHistoryEnabled } from '@/core/settings';
+import { Settings } from '@/core/settings';
 import type { RestorePositionAPI } from '@/features/restore-position';
 import type { SubtitlesAPI } from '@/features/subtitles';
 
@@ -23,7 +23,7 @@ export interface KeyboardAPI {
 /**
  * Initialize the Keyboard feature
  */
-export function initKeyboard(config: KeyboardConfig): KeyboardAPI {
+function initKeyboard(config: KeyboardConfig): KeyboardAPI {
   const { getVideoElement, getButton, restorePosition, subtitles } = config;
 
   const handleGlobalKeys = (e: KeyboardEvent) => {
@@ -57,7 +57,7 @@ export function initKeyboard(config: KeyboardConfig): KeyboardAPI {
     }
 
     // Handle position restore dialog
-    if (e.code === 'KeyR' && restorePosition && isPositionHistoryEnabled()) {
+    if (e.code === 'KeyR' && restorePosition && Settings.isPositionHistoryEnabled()) {
       e.preventDefault();
       e.stopPropagation();
       restorePosition.openDialog();
@@ -99,3 +99,8 @@ export function initKeyboard(config: KeyboardConfig): KeyboardAPI {
     },
   };
 }
+
+// Public API
+export const Keyboard = {
+  init: initKeyboard,
+};

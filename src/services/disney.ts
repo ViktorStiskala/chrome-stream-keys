@@ -1,6 +1,6 @@
 // Disney+ handler - service-specific configuration
 
-import { createHandler } from '@/handlers/factory';
+import { Handler } from '@/handlers';
 import type { SubtitleItem } from '@/types';
 
 // Guard attribute - uses HTML element attribute for atomic check-and-set
@@ -159,8 +159,8 @@ function getDisneyDuration(): number | null {
 /**
  * Initialize Disney+ handler
  */
-export function initDisneyHandler(): void {
-  createHandler({
+function initDisneyHandler(): void {
+  Handler.create({
     name: 'Disney+',
 
     getPlayer: () => document.body.querySelector('disney-web-player'),
@@ -235,7 +235,12 @@ export function initDisneyHandler(): void {
   });
 }
 
+// Public API
+export const DisneyHandler = {
+  init: initDisneyHandler,
+};
+
 // Auto-initialize when script is loaded (with guard against double execution)
 if (!shouldSkipInit()) {
-  initDisneyHandler();
+  DisneyHandler.init();
 }

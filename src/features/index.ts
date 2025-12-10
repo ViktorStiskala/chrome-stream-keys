@@ -1,9 +1,9 @@
 // Features barrel export
 
 export {
-  initRestorePosition,
+  RestorePosition,
   type RestorePositionAPI,
   type RestorePositionConfig,
 } from './restore-position';
-export { initSubtitles, type SubtitlesAPI, type SubtitlesConfig } from './subtitles';
-export { initKeyboard, type KeyboardAPI, type KeyboardConfig } from './keyboard';
+export { Subtitles, type SubtitlesAPI, type SubtitlesConfig } from './subtitles';
+export { Keyboard, type KeyboardAPI, type KeyboardConfig } from './keyboard';

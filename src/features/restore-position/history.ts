@@ -1,8 +1,8 @@
 // Position history state management
 
 import type { PositionEntry, StreamKeysVideoElement } from '@/types';
-import { isPositionHistoryEnabled } from '@/core/settings';
-import { formatTime } from '@/core/video';
+import { Settings } from '@/core/settings';
+import { Video } from '@/core/video';
 
 // Constants
 export const SEEK_MAX_HISTORY = 3;
@@ -21,7 +21,7 @@ export interface PositionHistoryState {
   isKeyboardOrButtonSeek: boolean;
 }
 
-export function createPositionHistoryState(): PositionHistoryState {
+function createPositionHistoryState(): PositionHistoryState {
   return {
     positionHistory: [],
     loadTimePosition: null,
@@ -33,8 +33,8 @@ export function createPositionHistoryState(): PositionHistoryState {
 /**
  * Save a position to history
  */
-export function savePositionToHistory(state: PositionHistoryState, time: number): void {
-  if (!isPositionHistoryEnabled()) return;
+function savePositionToHistory(state: PositionHistoryState, time: number): void {
+  if (!Settings.isPositionHistoryEnabled()) return;
 
   // Don't save very short positions
   if (time < SEEK_MIN_DIFF_SECONDS) return;
@@ -55,7 +55,7 @@ export function savePositionToHistory(state: PositionHistoryState, time: number)
 
   const entry: PositionEntry = {
     time,
-    label: formatTime(time),
+    label: Video.formatTime(time),
     savedAt: Date.now(),
   };
 
@@ -72,11 +72,11 @@ export function savePositionToHistory(state: PositionHistoryState, time: number)
 /**
  * Record position before a seek (with debouncing for keyboard seeks)
  */
-export function recordPositionBeforeSeek(
+function recordPositionBeforeSeek(
   state: PositionHistoryState,
   preSeekTime: number | undefined
 ): void {
-  if (!isPositionHistoryEnabled()) return;
+  if (!Settings.isPositionHistoryEnabled()) return;
   if (preSeekTime === undefined || preSeekTime === null) return;
 
   const now = Date.now();
@@ -100,14 +100,14 @@ export interface RestorePosition {
   isLoadTime: boolean;
 }
 
-export function getRestorePositions(state: PositionHistoryState): RestorePosition[] {
+function getRestorePositions(state: PositionHistoryState): RestorePosition[] {
   const positions: RestorePosition[] = [];
 
   // Add load time position first
   if (state.loadTimePosition !== null && state.loadTimePosition >= SEEK_MIN_DIFF_SECONDS) {
     positions.push({
       time: state.loadTimePosition,
-      label: formatTime(state.loadTimePosition),
+      label: Video.formatTime(state.loadTimePosition),
       relativeText: 'load time',
       isLoadTime: true,
     });
@@ -131,7 +131,7 @@ export function getRestorePositions(state: PositionHistoryState): RestorePositio
  * Set up video time tracking for position capture.
  * Uses the video's _streamKeysGetPlaybackTime() method for accurate time tracking.
  */
-export function setupVideoTracking(
+function setupVideoTracking(
   video: StreamKeysVideoElement,
   state: PositionHistoryState,
   getVideoElement: () => StreamKeysVideoElement | null
@@ -152,7 +152,7 @@ export function setupVideoTracking(
 
   // Handle seeking events - use stable time (guaranteed pre-seek value)
   const handleSeeking = () => {
-    if (!isPositionHistoryEnabled()) return;
+    if (!Settings.isPositionHistoryEnabled()) return;
 
     const stableTime = video._streamKeysGetStableTime?.();
     if (stableTime !== undefined && video._streamKeysReadyForTracking) {
@@ -181,7 +181,7 @@ export function setupVideoTracking(
         if (state.loadTimePosition === null && actualTime >= SEEK_MIN_DIFF_SECONDS) {
           state.loadTimePosition = actualTime;
           console.info(
-            `[StreamKeys] Load time position captured: ${formatTime(state.loadTimePosition)}`
+            `[StreamKeys] Load time position captured: ${Video.formatTime(state.loadTimePosition)}`
           );
         }
 
@@ -267,3 +267,12 @@ export function setupVideoTracking(
     }
   };
 }
+
+// Public API
+export const PositionHistory = {
+  createState: createPositionHistoryState,
+  save: savePositionToHistory,
+  record: recordPositionBeforeSeek,
+  getPositions: getRestorePositions,
+  setupTracking: setupVideoTracking,
+};

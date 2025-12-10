@@ -10,20 +10,27 @@ const DEFAULT_SETTINGS: StreamKeysSettings = {
 /**
  * Get the current settings from the injected global
  */
-export function getSettings(): StreamKeysSettings {
+function getSettings(): StreamKeysSettings {
   return window.__streamKeysSettings || DEFAULT_SETTINGS;
 }
 
 /**
  * Get subtitle language preferences
  */
-export function getSubtitlePreferences(): string[] {
+function getSubtitlePreferences(): string[] {
   return getSettings().subtitleLanguages || [];
 }
 
 /**
  * Check if position history feature is enabled
  */
-export function isPositionHistoryEnabled(): boolean {
+function isPositionHistoryEnabled(): boolean {
   return getSettings().positionHistoryEnabled !== false;
 }
+
+// Public API
+export const Settings = {
+  get: getSettings,
+  getSubtitlePreferences,
+  isPositionHistoryEnabled,
+};

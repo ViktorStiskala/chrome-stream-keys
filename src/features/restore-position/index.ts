@@ -1,19 +1,9 @@
 // Restore Position feature - main module
 
 import type { CleanupFn, StreamKeysVideoElement } from '@/types';
-import { isPositionHistoryEnabled } from '@/core/settings';
-import {
-  createPositionHistoryState,
-  recordPositionBeforeSeek,
-  setupVideoTracking,
-  type PositionHistoryState,
-} from './history';
-import {
-  createRestoreDialog,
-  closeRestoreDialog,
-  handleRestoreDialogKeys,
-  isDialogOpen,
-} from './dialog';
+import { Settings } from '@/core/settings';
+import { PositionHistory, type PositionHistoryState } from './history';
+import { RestoreDialog } from './dialog';
 
 export interface RestorePositionConfig {
   /** Get the augmented video element (with _streamKeysGetPlaybackTime method) */
@@ -42,8 +32,8 @@ export interface RestorePositionAPI {
 /**
  * Initialize the Restore Position feature
  */
-export function initRestorePosition(config: RestorePositionConfig): RestorePositionAPI {
-  const state = createPositionHistoryState();
+function initRestorePosition(config: RestorePositionConfig): RestorePositionAPI {
+  const state = PositionHistory.createState();
   let videoCleanup: CleanupFn | null = null;
   let earlySetupInterval: ReturnType<typeof setInterval> | null = null;
 
@@ -53,7 +43,7 @@ export function initRestorePosition(config: RestorePositionConfig): RestorePosit
   const setupVideoListeners = () => {
     const video = getVideoElement();
     if (video && !video._streamKeysSeekListenerAdded) {
-      videoCleanup = setupVideoTracking(video, state, getVideoElement);
+      videoCleanup = PositionHistory.setupTracking(video, state, getVideoElement);
     }
   };
 
@@ -85,20 +75,20 @@ export function initRestorePosition(config: RestorePositionConfig): RestorePosit
 
   return {
     openDialog: () => {
-      if (isPositionHistoryEnabled()) {
-        createRestoreDialog(state, getVideoElement);
+      if (Settings.isPositionHistoryEnabled()) {
+        RestoreDialog.create(state, getVideoElement);
       }
     },
-    closeDialog: closeRestoreDialog,
-    isDialogOpen,
+    closeDialog: RestoreDialog.close,
+    isDialogOpen: RestoreDialog.isOpen,
     recordBeforeSeek: (preSeekTime) => {
-      recordPositionBeforeSeek(state, preSeekTime);
+      PositionHistory.record(state, preSeekTime);
     },
     setKeyboardSeek: (value) => {
       state.isKeyboardOrButtonSeek = value;
     },
     handleDialogKeys: (e) => {
-      return handleRestoreDialogKeys(e, state, getVideoElement);
+      return RestoreDialog.handleKeys(e, state, getVideoElement);
     },
     getState: () => state,
     cleanup: () => {
@@ -109,10 +99,15 @@ export function initRestorePosition(config: RestorePositionConfig): RestorePosit
         clearInterval(earlySetupInterval);
       }
       clearInterval(setupInterval);
-      closeRestoreDialog();
+      RestoreDialog.close();
     },
   };
 }
+
+// Public API
+export const RestorePosition = {
+  init: initRestorePosition,
+};
 
 // Re-export types
 export type { PositionHistoryState } from './history';

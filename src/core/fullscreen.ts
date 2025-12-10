@@ -1,7 +1,7 @@
 // Fullscreen handling utilities
 
-import { createClickOverlay } from '@/ui/overlay';
-import { focusPlayer, type FocusConfig } from './focus';
+import { Overlay } from '@/ui/overlay';
+import { Focus, type FocusConfig } from './focus';
 
 export interface FullscreenConfig extends FocusConfig {
   getOverlayContainer?: () => HTMLElement;
@@ -15,7 +15,7 @@ export interface FullscreenState {
 /**
  * Get the current fullscreen element (handles webkit prefix)
  */
-export function getFullscreenElement(): Element | null {
+function getFullscreenElement(): Element | null {
   return (
     document.fullscreenElement ||
     (document as { webkitFullscreenElement?: Element }).webkitFullscreenElement ||
@@ -26,7 +26,7 @@ export function getFullscreenElement(): Element | null {
 /**
  * Create fullscreen change handler
  */
-export function createFullscreenHandler(
+function createFullscreenHandler(
   config: FullscreenConfig,
   state: FullscreenState,
   onKeyDown: (e: KeyboardEvent) => void
@@ -48,15 +48,15 @@ export function createFullscreenHandler(
       // Entering fullscreen
       state.currentFullscreenElement = fullscreenEl;
       state.currentFullscreenElement.addEventListener('keydown', onKeyDown as EventListener, true);
-      setTimeout(() => focusPlayer(config), 100);
+      setTimeout(() => Focus.player(config), 100);
       state.wasInFullscreen = true;
     } else if (state.wasInFullscreen) {
       // Exiting fullscreen
       state.wasInFullscreen = false;
       setTimeout(() => {
         const container = config.getOverlayContainer?.();
-        createClickOverlay(() => focusPlayer(config), container);
-        focusPlayer(config);
+        Overlay.createClick(() => Focus.player(config), container);
+        Focus.player(config);
         console.info('[StreamKeys] Fullscreen exit: Click to focus overlay added');
       }, 100);
     }
@@ -66,7 +66,7 @@ export function createFullscreenHandler(
 /**
  * Set up fullscreen change listeners
  */
-export function setupFullscreenListeners(handler: () => void): () => void {
+function setupFullscreenListeners(handler: () => void): () => void {
   document.addEventListener('fullscreenchange', handler);
   document.addEventListener('webkitfullscreenchange', handler);
 
@@ -75,3 +75,10 @@ export function setupFullscreenListeners(handler: () => void): () => void {
     document.removeEventListener('webkitfullscreenchange', handler);
   };
 }
+
+// Public API
+export const Fullscreen = {
+  getElement: getFullscreenElement,
+  createHandler: createFullscreenHandler,
+  setupListeners: setupFullscreenListeners,
+};

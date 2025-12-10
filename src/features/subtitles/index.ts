@@ -1,8 +1,8 @@
 // Subtitles feature - toggle subtitles on/off with language preference
 
 import type { SubtitleConfig, SubtitleItem, CleanupFn } from '@/types';
-import { getSubtitlePreferences } from '@/core/settings';
-import { showBanner } from '@/ui/banner';
+import { Settings } from '@/core/settings';
+import { Banner } from '@/ui/banner';
 
 export interface SubtitlesConfig {
   subtitles: SubtitleConfig;
@@ -37,11 +37,11 @@ function findMatchingLanguage(
 /**
  * Initialize the Subtitles feature
  */
-export function initSubtitles(config: SubtitlesConfig): SubtitlesAPI {
+function initSubtitles(config: SubtitlesConfig): SubtitlesAPI {
   const { subtitles } = config;
 
   const toggle = () => {
-    const preferences = getSubtitlePreferences();
+    const preferences = Settings.getSubtitlePreferences();
 
     // If no preferences configured, do nothing
     if (preferences.length === 0) {
@@ -53,7 +53,7 @@ export function initSubtitles(config: SubtitlesConfig): SubtitlesAPI {
     if (isOn) {
       // Turn off subtitles
       subtitles.turnOff();
-      showBanner('Captions: Off');
+      Banner.show('Captions: Off');
     } else {
       // Find matching language from preferences
       const available = subtitles.getAvailable();
@@ -61,9 +61,9 @@ export function initSubtitles(config: SubtitlesConfig): SubtitlesAPI {
 
       if (match) {
         subtitles.selectLanguage(match);
-        showBanner(match.label);
+        Banner.show(match.label);
       } else {
-        showBanner('Captions: Language not found, check extension settings');
+        Banner.show('Captions: Language not found, check extension settings');
       }
     }
   };
@@ -77,3 +77,8 @@ export function initSubtitles(config: SubtitlesConfig): SubtitlesAPI {
     },
   };
 }
+
+// Public API
+export const Subtitles = {
+  init: initSubtitles,
+};

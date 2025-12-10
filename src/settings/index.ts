@@ -212,6 +212,17 @@ function init(): void {
   loadPreferences();
 }
 
+// Internal API (for testing/debugging)
+export const SettingsPage = {
+  loadPreferences,
+  savePreferences,
+  renderList,
+  addLanguage,
+  removeLanguage,
+  restoreDefaults,
+  init,
+};
+
 // Initialize when DOM is ready
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);

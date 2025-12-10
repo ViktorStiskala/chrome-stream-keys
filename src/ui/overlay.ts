@@ -1,6 +1,6 @@
 // Click overlay for fullscreen exit focus recovery
 
-import { cssVars } from './styles/variables';
+import { Styles } from './styles/variables';
 
 const OVERLAY_ID = 'keyboard-activation-overlay';
 
@@ -9,7 +9,7 @@ const OVERLAY_ID = 'keyboard-activation-overlay';
  * This is needed because browsers require a real user click to grant keyboard focus
  * to the page after exiting fullscreen.
  */
-export function createClickOverlay(onActivated: () => void, container?: HTMLElement): void {
+function createClickOverlay(onActivated: () => void, container?: HTMLElement): void {
   const existing = document.getElementById(OVERLAY_ID);
   if (existing) existing.remove();
 
@@ -21,7 +21,7 @@ export function createClickOverlay(onActivated: () => void, container?: HTMLElem
     left: 0 !important;
     width: 100vw !important;
     height: 100vh !important;
-    z-index: ${cssVars.zIndex.max} !important;
+    z-index: ${Styles.vars.zIndex.max} !important;
     background: transparent !important;
     cursor: default !important;
     pointer-events: auto !important;
@@ -46,9 +46,15 @@ export function createClickOverlay(onActivated: () => void, container?: HTMLElem
 /**
  * Remove the click overlay if it exists
  */
-export function removeClickOverlay(): void {
+function removeClickOverlay(): void {
   const existing = document.getElementById(OVERLAY_ID);
   if (existing) {
     existing.remove();
   }
 }
+
+// Public API
+export const Overlay = {
+  createClick: createClickOverlay,
+  removeClick: removeClickOverlay,
+};

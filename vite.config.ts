@@ -52,7 +52,17 @@ export default defineConfig({
     webExtension({
       manifest: 'src/manifest.json',
       additionalInputs: ['src/services/disney.ts', 'src/services/hbomax.ts'],
-      disableAutoLaunch: true,
+      // Add web-ext configuration for profile persistence
+      webExtConfig: {
+        target: 'chromium',
+        // Keep changes to a temporary profile across sessions
+        keepProfileChanges: true,
+        profileCreateIfMissing: true,
+        // Use a dedicated dev profile directory
+        chromiumProfile: '.chrome-profile',
+        // Optional: Set a starting URL after browser launches
+        startUrl: ['https://play.hbomax.com/'],
+      },
     }),
     copyLogos(),
     prettyManifest(),

@@ -1,6 +1,6 @@
 // HBO Max handler - service-specific configuration
 
-import { createHandler } from '@/handlers/factory';
+import { Handler } from '@/handlers';
 import type { SubtitleItem } from '@/types';
 
 // Guard attribute - uses HTML element attribute for atomic check-and-set
@@ -29,8 +29,8 @@ function getButton(primarySelector: string, fallbackSelector: string): HTMLEleme
 /**
  * Initialize HBO Max handler
  */
-export function initHboMaxHandler(): void {
-  createHandler({
+function initHboMaxHandler(): void {
+  Handler.create({
     name: 'HBO Max',
 
     getPlayer: () => document.querySelector('div[data-testid="playerContainer"]'),
@@ -112,7 +112,12 @@ export function initHboMaxHandler(): void {
   });
 }
 
+// Public API
+export const HboMaxHandler = {
+  init: initHboMaxHandler,
+};
+
 // Auto-initialize when script is loaded (with guard against double execution)
 if (!shouldSkipInit()) {
-  initHboMaxHandler();
+  HboMaxHandler.init();
 }

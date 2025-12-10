@@ -65,7 +65,9 @@ async function injectHandler(tabId: number, handlerFile: string): Promise<void> 
 /**
  * Handle navigation completion
  */
-chrome.webNavigation.onCompleted.addListener((details) => {
+function handleNavigationComplete(
+  details: chrome.webNavigation.WebNavigationFramedCallbackDetails
+): void {
   // Skip chrome:// URLs
   if (details.url.includes('chrome://')) {
     return;
@@ -89,19 +91,39 @@ chrome.webNavigation.onCompleted.addListener((details) => {
 
   injectedTabs.set(details.tabId, handler.handlerFile);
   injectHandler(details.tabId, handler.handlerFile);
-});
+}
 
-// Clean up when tab is closed
-chrome.tabs.onRemoved.addListener((tabId) => {
+/**
+ * Handle tab removal
+ */
+function handleTabRemoved(tabId: number): void {
   injectedTabs.delete(tabId);
-});
+}
 
-// Clean up when tab navigates away from supported service
-chrome.webNavigation.onBeforeNavigate.addListener((details) => {
+/**
+ * Handle before navigation - clean up when navigating away
+ */
+function handleBeforeNavigate(
+  details: chrome.webNavigation.WebNavigationParentedCallbackDetails
+): void {
   if (details.frameId !== 0) return;
 
   const handler = findHandler(details.url);
   if (!handler) {
     injectedTabs.delete(details.tabId);
   }
-});
+}
+
+// Internal API (for testing/debugging)
+export const Background = {
+  findHandler,
+  injectHandler,
+  handleNavigationComplete,
+  handleTabRemoved,
+  handleBeforeNavigate,
+};
+
+// Set up event listeners
+chrome.webNavigation.onCompleted.addListener(handleNavigationComplete);
+chrome.tabs.onRemoved.addListener(handleTabRemoved);
+chrome.webNavigation.onBeforeNavigate.addListener(handleBeforeNavigate);

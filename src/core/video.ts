@@ -106,7 +106,7 @@ function findVideoInPlayer(player: HTMLElement): HTMLVideoElement | null {
  * Create a video element getter with custom behavior baked in.
  * The returned function finds the video and augments it with _streamKeysGetPlaybackTime.
  */
-export function createVideoGetter(config: VideoGetterConfig): () => StreamKeysVideoElement | null {
+function createVideoGetter(config: VideoGetterConfig): () => StreamKeysVideoElement | null {
   return () => {
     let video: HTMLVideoElement | null = null;
 
@@ -137,7 +137,7 @@ export function createVideoGetter(config: VideoGetterConfig): () => StreamKeysVi
 /**
  * Format seconds to human-readable time string (e.g., "1:23:45" or "23:45")
  */
-export function formatTime(seconds: number): string {
+function formatTime(seconds: number): string {
   const hrs = Math.floor(seconds / 3600);
   const mins = Math.floor((seconds % 3600) / 60);
   const secs = Math.floor(seconds % 60);
@@ -151,7 +151,7 @@ export function formatTime(seconds: number): string {
 /**
  * Format timestamp to relative time string (e.g., "2m 30s ago")
  */
-export function formatRelativeTime(timestamp: number): string {
+function formatRelativeTime(timestamp: number): string {
   const totalSeconds = Math.floor((Date.now() - timestamp) / 1000);
 
   if (totalSeconds < 1) return 'just now';
@@ -176,3 +176,10 @@ export function formatRelativeTime(timestamp: number): string {
 
   return `${seconds}s ago`;
 }
+
+// Public API
+export const Video = {
+  createGetter: createVideoGetter,
+  formatTime,
+  formatRelativeTime,
+};
