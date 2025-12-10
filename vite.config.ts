@@ -12,13 +12,16 @@ const isDebugMode =
   process.argv.includes('serve') ||
   process.env.NODE_ENV !== 'production';
 
+// Output directory: dev builds go to build/dev/, production to build/chrome/
+const outDir = isDebugMode ? 'build/dev/chrome/extension' : 'build/chrome/extension';
+
 // Copy logo files to build directory
 function copyLogos() {
   return {
     name: 'copy-logos',
     writeBundle() {
       const srcDir = resolve(__dirname, 'src/logo');
-      const destDir = resolve(__dirname, 'build/chrome/extension/logo');
+      const destDir = resolve(__dirname, `${outDir}/logo`);
 
       try {
         mkdirSync(destDir, { recursive: true });
@@ -42,7 +45,7 @@ function prettyManifest() {
     writeBundle() {
       if (!isDebugMode) return;
 
-      const manifestPath = resolve(__dirname, 'build/chrome/extension/manifest.json');
+      const manifestPath = resolve(__dirname, `${outDir}/manifest.json`);
       try {
         const content = readFileSync(manifestPath, 'utf-8');
         const json = JSON.parse(content);
@@ -94,7 +97,7 @@ export default defineConfig({
     __DEV__: JSON.stringify(isDebugMode),
   },
   build: {
-    outDir: 'build/chrome/extension',
+    outDir,
     emptyOutDir: true,
     // In dev mode, don't minify for easier debugging
     minify: !isDebugMode,
