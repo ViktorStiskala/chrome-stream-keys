@@ -28,6 +28,77 @@ Run `npm run check` to verify:
 
 A task is NOT complete until all checks pass. Use `npm run lint:fix` and `npm run format` to auto-fix issues.
 
+## MANDATORY: ES Module Encapsulation Pattern
+
+**All modules in `src/` MUST use the namespace-like const object pattern for public APIs. NO EXCEPTIONS.**
+
+### Pattern Structure
+
+```typescript
+// ✅ CORRECT: Private helper functions (not exported)
+function helperFunction() { ... }
+function anotherHelper() { ... }
+
+// ✅ CORRECT: Types exported as named exports alongside namespace
+export interface ModuleConfig { ... }
+export type ModuleResult = { ... }
+
+// ✅ CORRECT: Public API exposed through const object
+export const ModuleName = {
+  method1: publicMethod1,
+  method2: publicMethod2,
+  init: initFunction,
+};
+```
+
+### Rules
+
+1. **Private functions**: Helper functions that are only used within the module MUST NOT be exported. Keep them as regular function declarations.
+
+2. **Public API**: All public functionality MUST be exposed through a single exported const object named after the module's purpose (e.g., `Focus`, `Player`, `Keyboard`, `Banner`).
+
+3. **Types**: TypeScript interfaces and types cannot be placed inside runtime const objects. Export them as named exports alongside the namespace object.
+
+4. **Naming**: The const object should use PascalCase and represent the module's domain (e.g., `Video`, `Fullscreen`, `RestoreDialog`).
+
+### Examples
+
+```typescript
+// src/core/focus.ts
+function setupFocusListeners(element: HTMLElement) { ... }  // Private
+
+export interface FocusConfig { ... }  // Type export
+
+export const Focus = {
+  player: focusPlayer,
+  createMouseMoveHandler,
+};
+```
+
+```typescript
+// src/features/keyboard/index.ts
+function handleKeyDown(e: KeyboardEvent) { ... }  // Private
+function getButtonForKey(key: string) { ... }     // Private
+
+export const Keyboard = {
+  init: initKeyboard,
+};
+```
+
+### Consuming Modules
+
+```typescript
+// Import the namespace object
+import { Focus } from '@/core/focus';
+import { Keyboard } from '@/features/keyboard';
+
+// Use via namespace
+Focus.player(config);
+Keyboard.init(player);
+```
+
+**This pattern ensures consistent API design, clear public/private boundaries, and better code organization across the entire codebase.**
+
 ## Project Structure
 
 ```
@@ -69,10 +140,11 @@ stream-keys/
 ## Adding New Streaming Services
 
 1. Create new service handler in `src/services/` folder (e.g., `netflix.ts`)
-2. Use `createHandler(config)` with service-specific config and feature flags
-3. Add URL matching in `src/background/index.ts` router
-4. Add host permissions in `src/manifest.json`
-5. Create service-specific Cursor rules file in `src/services/.cursor/rules/` (e.g., `netflix.mdc`)
+2. **Add debug console forwarding at the top of the file** (see Debug Logging section below)
+3. Use `createHandler(config)` with service-specific config and feature flags
+4. Add URL matching in `src/background/index.ts` router
+5. Add host permissions in `src/manifest.json`
+6. Create service-specific Cursor rules file in `src/services/.cursor/rules/` (e.g., `netflix.mdc`)
 
 ## Handler Configuration with Feature Flags
 
@@ -118,7 +190,54 @@ createHandler({
 - Use CSS variables from `@/ui/styles/variables`
 - Prefer `const` assertions for configuration objects
 
-## Logging Convention
+## Debug Logging
+
+### Console Forwarding for Dev Mode
+
+**All service handlers in `src/services/` MUST initialize console forwarding at the top of the file:**
+
+```typescript
+import { Debug } from '@/core/debug';
+
+// __DEV__ is defined by vite config based on isDebugMode
+declare const __DEV__: boolean;
+
+// Initialize console forwarding in dev mode (must be early, before other logs)
+if (__DEV__) {
+  Debug.initConsoleForward();
+}
+```
+
+This forwards all `console.log/warn/error` from the page context to the Vite dev server, which writes them to `.cursor/debug.log`. Without this, browser console logs won't appear in the debug log file.
+
+**Why each service needs this:** Service handlers run in the MAIN world of the page (not the service worker), so each service needs to initialize its own console forwarding.
+
+### Debug API
+
+- `Debug.log(...)` - Logs with `[StreamKeys]` prefix and forwards to dev server
+- `Debug.initConsoleForward()` - Patches console.log/warn/error to forward to dev server
+
+### Dead Code Elimination
+
+**All debug calls MUST be wrapped in `if (__DEV__)` blocks** to ensure they are completely removed from production builds:
+
+```typescript
+// ✅ CORRECT: Entire block removed in production
+if (__DEV__) {
+  Debug.initConsoleForward();
+  Debug.log('Player initialized', player);
+}
+
+// ❌ WRONG: Call remains in production (function just exits early)
+Debug.initConsoleForward();
+```
+
+When `__DEV__` is `false`, Vite + terser removes the entire `if` block including:
+- The condition check
+- The function calls
+- Argument evaluation
+
+### Logging Convention
 
 - `console.info('[StreamKeys] ...')` - Extension loaded messages
 - `console.warn('[StreamKeys] ...')` - Button not found or other recoverable issues

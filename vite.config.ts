@@ -2,8 +2,15 @@ import { defineConfig } from 'vite';
 import webExtension from 'vite-plugin-web-extension';
 import { resolve } from 'path';
 import { copyFileSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs';
+import { DebugLogger } from './debug/vite-debug-logger';
 
-const isWatch = process.argv.includes('--watch');
+// Dev mode detection - used for conditional plugins and build options
+// Checks for watch mode, dev commands, or non-production environment
+const isDebugMode =
+  process.argv.includes('--watch') ||
+  process.argv.includes('dev') ||
+  process.argv.includes('serve') ||
+  process.env.NODE_ENV !== 'production';
 
 // Copy logo files to build directory
 function copyLogos() {
@@ -33,7 +40,7 @@ function prettyManifest() {
   return {
     name: 'pretty-manifest',
     writeBundle() {
-      if (!isWatch) return;
+      if (!isDebugMode) return;
 
       const manifestPath = resolve(__dirname, 'build/chrome/extension/manifest.json');
       try {
@@ -49,6 +56,8 @@ function prettyManifest() {
 
 export default defineConfig({
   plugins: [
+    // Debug logger (dev mode only) - captures vite logs and browser console.log to .cursor/debug.log
+    ...(isDebugMode ? [DebugLogger.plugin()] : []),
     webExtension({
       manifest: 'src/manifest.json',
       additionalInputs: ['src/services/disney.ts', 'src/services/hbomax.ts'],
@@ -62,6 +71,14 @@ export default defineConfig({
         chromiumProfile: '.chrome-profile',
         // Optional: Set a starting URL after browser launches
         startUrl: ['https://play.hbomax.com/'],
+        // Disable web security to allow debug log forwarding to localhost
+        // Note: Requires fresh profile (chromiumProfile) to take effect
+        args: [
+          '--disable-web-security',
+          '--disable-site-isolation-trials',
+          '--allow-running-insecure-content',
+          '--hide-crash-restore-bubble',
+        ],
       },
     }),
     copyLogos(),
@@ -73,13 +90,13 @@ export default defineConfig({
     },
   },
   define: {
-    // Enable debug logging in watch mode
-    __DEV__: JSON.stringify(isWatch),
+    // Expose __DEV__ to client code for conditional debug logic
+    __DEV__: JSON.stringify(isDebugMode),
   },
   build: {
     outDir: 'build/chrome/extension',
     emptyOutDir: true,
-    // In watch mode (dev), don't minify for easier debugging
-    minify: !isWatch,
+    // In dev mode, don't minify for easier debugging
+    minify: !isDebugMode,
   },
 });

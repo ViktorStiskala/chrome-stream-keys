@@ -1,7 +1,16 @@
 // Disney+ handler - service-specific configuration
 
 import { Handler } from '@/handlers';
+import { Debug } from '@/core/debug';
 import type { SubtitleItem } from '@/types';
+
+// __DEV__ is defined by vite config based on isDebugMode
+declare const __DEV__: boolean;
+
+// Initialize console forwarding in dev mode (must be early, before other logs)
+if (__DEV__) {
+  Debug.initConsoleForward();
+}
 
 // Guard attribute - uses HTML element attribute for atomic check-and-set
 const GUARD_ATTR = 'data-streamkeys-disney';

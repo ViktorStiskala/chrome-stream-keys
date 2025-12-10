@@ -1,6 +1,15 @@
 // Service worker router - injects appropriate handler based on URL
 
 import type { StreamKeysSettings } from '@/types';
+import { Debug } from '@/core/debug';
+
+// __DEV__ is defined by vite config based on isWatch
+declare const __DEV__: boolean;
+
+// Initialize console forwarding in dev mode
+if (__DEV__) {
+  Debug.initConsoleForward();
+}
 
 const STORAGE_KEY = 'subtitleLanguages';
 const POSITION_HISTORY_KEY = 'positionHistoryEnabled';
@@ -101,17 +110,15 @@ function handleTabRemoved(tabId: number): void {
 }
 
 /**
- * Handle before navigation - clean up when navigating away
+ * Handle before navigation - clean up to allow re-injection on reload
  */
 function handleBeforeNavigate(
   details: chrome.webNavigation.WebNavigationParentedCallbackDetails
 ): void {
   if (details.frameId !== 0) return;
 
-  const handler = findHandler(details.url);
-  if (!handler) {
-    injectedTabs.delete(details.tabId);
-  }
+  // Always clear on navigation start to allow re-injection on reload
+  injectedTabs.delete(details.tabId);
 }
 
 // Internal API (for testing/debugging)
@@ -127,3 +134,27 @@ export const Background = {
 chrome.webNavigation.onCompleted.addListener(handleNavigationComplete);
 chrome.tabs.onRemoved.addListener(handleTabRemoved);
 chrome.webNavigation.onBeforeNavigate.addListener(handleBeforeNavigate);
+
+/**
+ * Inject into existing tabs on extension startup
+ * Handles tabs opened before the extension's service worker was ready
+ */
+async function injectIntoExistingTabs(): Promise<void> {
+  const tabs = await chrome.tabs.query({});
+  for (const tab of tabs) {
+    const tabId = tab.id;
+    if (!tabId || !tab.url) continue;
+
+    const handler = findHandler(tab.url);
+    if (handler && !injectedTabs.has(tabId)) {
+      injectedTabs.set(tabId, handler.handlerFile);
+      injectHandler(tabId, handler.handlerFile).catch(() => {
+        // Tab might not be ready yet, ignore errors
+        injectedTabs.delete(tabId);
+      });
+    }
+  }
+}
+
+// Run on service worker startup
+injectIntoExistingTabs();

@@ -10,7 +10,7 @@ export interface PlayerSetupConfig {
 }
 
 export interface PlayerState {
-  keyListenerAdded: boolean;
+  attachedPlayer: HTMLElement | null;
 }
 
 /**
@@ -20,21 +20,24 @@ function setupPlayer(config: PlayerSetupConfig, state: PlayerState): void {
   const player = config.getPlayer() as StreamKeysPlayerElement | null;
   if (!player) return;
 
-  // Call custom setup if provided
-  if (config.onPlayerSetup) {
-    config.onPlayerSetup(player);
-  }
+  // Detect if player element changed (SPA navigation)
+  const playerChanged = state.attachedPlayer !== player;
 
-  // Add keydown listener directly to player
-  if (!state.keyListenerAdded) {
+  if (playerChanged) {
+    // Re-attach keydown listener to new player
     player.addEventListener('keydown', config.onKeyDown, true);
-    state.keyListenerAdded = true;
+    state.attachedPlayer = player;
   }
 
   // Add mousemove listener for focus restoration
   if (!player._streamKeysMouseListenerAdded) {
     player.addEventListener('mousemove', config.onMouseMove);
     player._streamKeysMouseListenerAdded = true;
+  }
+
+  // Call custom setup if provided
+  if (config.onPlayerSetup) {
+    config.onPlayerSetup(player);
   }
 }
 

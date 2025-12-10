@@ -96,7 +96,7 @@ function createHandler(config: HandlerConfig): HandlerAPI {
 
   // Player setup
   const playerState: PlayerState = {
-    keyListenerAdded: false,
+    attachedPlayer: null,
   };
 
   const playerSetupConfig = {
