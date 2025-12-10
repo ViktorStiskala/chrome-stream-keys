@@ -65,3 +65,30 @@ To select a language: Click the corresponding button element.
 ## DOM Reference
 
 **Important:** Always consult `resources/dom/hbomax.html` when implementing any DOM-related changes, including selectors, value extraction, element traversal, or player structure. This file contains a snapshot of the actual HBO Max player (irrelevant parts removed to make the file smaller) DOM structure and should be the primary reference for understanding the page layout.
+
+## Testing
+
+### Test File Location
+
+Tests are co-located at `src/services/hbomax.test.ts`.
+
+### Internal Functions for Testing
+
+The `HboMaxHandler` exports a `_test` object with internal functions:
+```typescript
+HboMaxHandler._test.getPlayer()       // Get playerContainer element
+HboMaxHandler._test.getButton(code)   // Get button for key code
+HboMaxHandler._test.subtitles         // Subtitle config object
+```
+
+### DOM Fixture Testing
+
+Tests use the real DOM fixture from `resources/dom/hbomax.html`:
+```typescript
+import { loadFixture, resetFixture } from '@test';
+
+beforeEach(() => {
+  resetFixture();
+  loadFixture('hbomax');
+});
+```

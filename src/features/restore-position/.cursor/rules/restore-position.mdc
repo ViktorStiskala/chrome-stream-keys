@@ -103,3 +103,48 @@ This method is used by both keyboard seeks and timeline/UI seeks for consistent 
 - `_streamKeysGetStableTime()`: Returns stable time with fallback chain
 - `_streamKeysSeekListenerAdded`: Prevents duplicate listeners
 - `_streamKeysReadyForTracking`: True after initial load complete
+
+## Testing
+
+### Test File Location
+
+Tests are co-located at `src/features/restore-position/history.test.ts`.
+
+### Exported Constants
+
+The following constants are exported for use in tests:
+```typescript
+import {
+  SEEK_MAX_HISTORY,      // 3 - max entries in history
+  SEEK_MIN_DIFF_SECONDS, // 15 - min seconds between positions
+  SEEK_DEBOUNCE_MS       // 5000 - debounce window for rapid seeks
+} from './history';
+```
+
+### Testing Pattern
+
+**Always use exported constants instead of hardcoded values:**
+```typescript
+// ✅ CORRECT: Use constants
+it('does NOT save position below threshold', () => {
+  PositionHistory.save(state, SEEK_MIN_DIFF_SECONDS - 5);
+  expect(state.positionHistory).toHaveLength(0);
+});
+
+// ❌ WRONG: Hardcoded value
+it('does NOT save position below threshold', () => {
+  PositionHistory.save(state, 10); // Magic number!
+  expect(state.positionHistory).toHaveLength(0);
+});
+```
+
+### Mock Requirements
+
+The tests mock `@/core/settings`:
+```typescript
+vi.mock('@/core/settings', () => ({
+  Settings: {
+    isPositionHistoryEnabled: vi.fn(() => true),
+  },
+}));
+```

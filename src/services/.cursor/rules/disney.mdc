@@ -85,3 +85,43 @@ To select a language: Click the corresponding radio input element.
 ## DOM Reference
 
 **Important:** Always consult `resources/dom/disney.html` when implementing any DOM-related changes, including selectors, value extraction, element traversal, or Shadow DOM access. This file contains a snapshot of the actual Disney+ player (irrelevant parts removed to make the file smaller) DOM structure and should be the primary reference for understanding the page layout.
+
+## Testing
+
+### Test File Location
+
+Tests are co-located at `src/services/disney.test.ts`.
+
+### Internal Functions for Testing
+
+The `DisneyHandler` exports a `_test` object with internal functions:
+```typescript
+DisneyHandler._test.getPlayer()     // Get player element
+DisneyHandler._test.getVideo()      // Get active video element
+DisneyHandler._test.getPlaybackTime() // Get time from Shadow DOM
+DisneyHandler._test.getDuration()   // Get duration from Shadow DOM
+DisneyHandler._test.subtitles       // Subtitle config object
+DisneyHandler._test.resetCache()    // Reset progress bar cache
+```
+
+### Shadow DOM Mocking
+
+For testing `getPlaybackTime()` and `getDuration()`, use the helper from `vitest.setup.ts`:
+```typescript
+import { createMockProgressBar } from '@test';
+
+// Creates progress-bar element with Shadow DOM
+createMockProgressBar('120', '7200'); // aria-valuenow, aria-valuemax
+```
+
+### DOM Fixture Testing
+
+Tests use the real DOM fixture from `resources/dom/disney.html`:
+```typescript
+import { loadFixture, resetFixture } from '@test';
+
+beforeEach(() => {
+  resetFixture();
+  loadFixture('disney');
+});
+```

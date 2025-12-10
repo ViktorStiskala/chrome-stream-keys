@@ -165,6 +165,52 @@ function getDisneyDuration(): number | null {
   return null;
 }
 
+// Subtitle config (extracted for testing)
+const subtitleConfig = {
+  getAvailable: (): SubtitleItem[] => {
+    const labels = document.querySelectorAll<HTMLLabelElement>(
+      '#subtitleTrackPicker label.picker-item'
+    );
+    const results: SubtitleItem[] = [];
+
+    labels.forEach((label) => {
+      // Skip the "off" option
+      if (label.getAttribute('for') === 'subtitleTrackPicker-off') return;
+      results.push({
+        label: label.textContent?.trim() || '',
+        element: label,
+        inputId: label.getAttribute('for') || undefined,
+      });
+    });
+
+    return results;
+  },
+
+  getCurrentState: (): boolean => {
+    const offRadio = document.querySelector<HTMLInputElement>('#subtitleTrackPicker-off');
+    // Subtitles are ON if the "off" radio is NOT checked
+    return offRadio !== null && !offRadio.checked;
+  },
+
+  turnOff: (): void => {
+    const offRadio = document.querySelector<HTMLInputElement>('#subtitleTrackPicker-off');
+    offRadio?.click();
+  },
+
+  selectLanguage: (item: SubtitleItem): void => {
+    if (item.inputId) {
+      const input = document.querySelector<HTMLInputElement>(`#${item.inputId}`);
+      input?.click();
+    }
+  },
+};
+
+/** Reset cache - for testing */
+function resetCache(): void {
+  disneyProgressBarCache = null;
+  disneyTimeLoggedOnce = false;
+}
+
 /**
  * Initialize Disney+ handler
  */
@@ -203,50 +249,22 @@ function initDisneyHandler(): void {
       player.setAttribute('tabindex', '-1');
     },
 
-    subtitles: {
-      getAvailable: (): SubtitleItem[] => {
-        const labels = document.querySelectorAll<HTMLLabelElement>(
-          '#subtitleTrackPicker label.picker-item'
-        );
-        const results: SubtitleItem[] = [];
-
-        labels.forEach((label) => {
-          // Skip the "off" option
-          if (label.getAttribute('for') === 'subtitleTrackPicker-off') return;
-          results.push({
-            label: label.textContent?.trim() || '',
-            element: label,
-            inputId: label.getAttribute('for') || undefined,
-          });
-        });
-
-        return results;
-      },
-
-      getCurrentState: (): boolean => {
-        const offRadio = document.querySelector<HTMLInputElement>('#subtitleTrackPicker-off');
-        // Subtitles are ON if the "off" radio is NOT checked
-        return offRadio !== null && !offRadio.checked;
-      },
-
-      turnOff: (): void => {
-        const offRadio = document.querySelector<HTMLInputElement>('#subtitleTrackPicker-off');
-        offRadio?.click();
-      },
-
-      selectLanguage: (item: SubtitleItem): void => {
-        if (item.inputId) {
-          const input = document.querySelector<HTMLInputElement>(`#${item.inputId}`);
-          input?.click();
-        }
-      },
-    },
+    subtitles: subtitleConfig,
   });
 }
 
 // Public API
 export const DisneyHandler = {
   init: initDisneyHandler,
+  /** Internal functions exposed for testing only */
+  _test: {
+    getPlayer: () => document.body.querySelector('disney-web-player'),
+    getVideo: getDisneyVideo,
+    getPlaybackTime: getDisneyPlaybackTime,
+    getDuration: getDisneyDuration,
+    subtitles: subtitleConfig,
+    resetCache,
+  },
 };
 
 // Auto-initialize when script is loaded (with guard against double execution)

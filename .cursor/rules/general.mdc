@@ -254,6 +254,66 @@ When `__DEV__` is `false`, Vite + terser removes the entire `if` block including
 - `npm run format:check` - Check formatting without changes
 - `npm run check` - Run all checks (typecheck + lint + format)
 
+## Testing
+
+### Test Commands
+
+- `npm test` - Run all tests once
+- `npm run test:watch` - Run tests in watch mode
+
+### Test Structure
+
+Tests are co-located with source files (vitest best practice):
+- `src/core/video.test.ts` - Tests for `video.ts`
+- `src/features/restore-position/history.test.ts` - Tests for position history
+- `src/services/disney.test.ts` - Disney+ service tests
+- `src/services/hbomax.test.ts` - HBO Max service tests
+- `src/build.test.ts` - Production build verification
+
+### DOM Fixtures
+
+Real DOM snapshots for integration testing are stored in `resources/dom/`:
+- `resources/dom/disney.html` - Disney+ player DOM snapshot
+- `resources/dom/hbomax.html` - HBO Max player DOM snapshot
+
+Use the test setup helpers from `vitest.setup.ts`:
+```typescript
+import { loadFixture, resetFixture } from '@test';
+
+beforeEach(() => {
+  resetFixture();
+  loadFixture('disney');
+});
+```
+
+### Service Testing Pattern
+
+Services export a `_test` object with internal functions for testing:
+```typescript
+export const ServiceHandler = {
+  init: initHandler,
+  _test: {
+    getPlayer,
+    getVideo,
+    subtitles: subtitleConfig,
+    // ... other internal functions
+  },
+};
+```
+
+### Testing Constants
+
+When testing with threshold values, import and use the exported constants instead of hardcoding:
+```typescript
+import { SEEK_MIN_DIFF_SECONDS, SEEK_DEBOUNCE_MS, SEEK_MAX_HISTORY } from './history';
+
+// Use constants in test cases
+it('does NOT save position below threshold', () => {
+  PositionHistory.save(state, SEEK_MIN_DIFF_SECONDS - 5);
+  expect(state.positionHistory).toHaveLength(0);
+});
+```
+
 ## Manifest Constraints
 
 - The `description` field in `manifest.json` has a maximum length of 132 characters.
