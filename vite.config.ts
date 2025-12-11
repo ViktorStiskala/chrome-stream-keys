@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import webExtension from 'vite-plugin-web-extension';
 import { resolve } from 'path';
 import { copyFileSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs';
+import packageJson from './package.json' with { type: 'json' };
 import { DebugLogger } from './debug/vite-debug-logger';
 
 // Dev mode detection - used for conditional plugins and build options
@@ -72,8 +73,12 @@ export default defineConfig({
       additionalInputs: ['src/services/disney.ts', 'src/services/hbomax.ts'],
       // Target browser for manifest transformations and web-ext
       browser,
-      // Transform manifest for Firefox compatibility (service_worker -> scripts)
+      // Transform manifest: inject version from package.json and Firefox compatibility
       transformManifest: (manifest) => {
+        // Sync version from package.json
+        manifest.version = packageJson.version;
+
+        // Firefox compatibility: service_worker -> scripts
         if (browser === 'firefox' && manifest.background) {
           const bg = manifest.background as { service_worker?: string; scripts?: string[] };
           if (bg.service_worker) {
