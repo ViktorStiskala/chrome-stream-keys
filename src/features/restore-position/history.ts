@@ -160,7 +160,15 @@ function setupVideoTracking(
         // Keyboard seeks are handled by recordPositionBeforeSeek with debouncing
         return;
       }
-      // UI buttons and timeline clicks: save immediately using stable time
+
+      // Apply debouncing for UI seeks as well - prevents rapid saves from multiple seeking events
+      const now = Date.now();
+      if (now - state.lastSeekTime < SEEK_DEBOUNCE_MS) {
+        return;
+      }
+      state.lastSeekTime = now;
+
+      // UI buttons and timeline clicks: save using stable time
       savePositionToHistory(state, stableTime);
     }
   };

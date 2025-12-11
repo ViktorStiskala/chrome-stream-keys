@@ -80,8 +80,21 @@ function initKeyboard(config: KeyboardConfig): KeyboardAPI {
       if (currentTime !== undefined) {
         restorePosition.recordBeforeSeek(currentTime);
       }
-      // Reset flag after seek completes
-      setTimeout(() => restorePosition.setKeyboardSeek(false), 500);
+      // Reset flag when seek completes (seeked event) or after timeout as fallback
+      if (video) {
+        const resetFlag = () => {
+          restorePosition.setKeyboardSeek(false);
+          video.removeEventListener('seeked', resetFlag);
+        };
+        video.addEventListener('seeked', resetFlag, { once: true });
+        // Fallback timeout in case seeked never fires
+        setTimeout(() => {
+          video.removeEventListener('seeked', resetFlag);
+          restorePosition.setKeyboardSeek(false);
+        }, 2000);
+      } else {
+        setTimeout(() => restorePosition.setKeyboardSeek(false), 500);
+      }
     }
 
     e.preventDefault();
