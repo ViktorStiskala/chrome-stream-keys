@@ -1,21 +1,36 @@
 // Debug logging utility - only used in development mode (watch mode)
 // All calls to Debug methods should be wrapped in `if (__DEV__)` for dead code elimination
 
+// __DEV__ is defined by vite config based on isWatch
+declare const __DEV__: boolean;
+
 const DEV_SERVER_URL = 'http://localhost:5173/__debug_log';
 
 // Track if we've logged a connection error (avoid spam)
 let connectionErrorLogged = false;
 
+// Store original console methods to avoid going through patched versions
+/* eslint-disable no-console */
+const originalConsole = {
+  log: console.log.bind(console),
+  info: console.info.bind(console),
+  warn: console.warn.bind(console),
+  error: console.error.bind(console),
+};
+/* eslint-enable no-console */
+
 /**
  * Send log to dev server.
- * Tries fetch first, falls back to posting via window message for CSP-restricted pages.
+ * @param level - Log level (LOG, INFO, WARN, ERROR)
+ * @param method - Method prefix (e.g., 'Debug.log', 'console.info')
+ * @param args - Log arguments
  */
-function sendToServer(level: string, args: unknown[]): void {
+function sendToServer(level: string, method: string, args: unknown[]): void {
   const message = args
     .map((a) => (typeof a === 'object' ? JSON.stringify(a) : String(a)))
     .join(' ');
 
-  const payload = { level, source: 'extension', message };
+  const payload = { level, method, source: 'extension', message };
 
   fetch(DEV_SERVER_URL, {
     method: 'POST',
@@ -36,14 +51,62 @@ function sendToServer(level: string, args: unknown[]): void {
 }
 
 function log(...args: unknown[]): void {
-  // eslint-disable-next-line no-console
-  console.log('[StreamKeys]', ...args);
-  sendToServer('LOG', args);
+  originalConsole.log('[StreamKeys]', ...args);
+  sendToServer('LOG', 'Debug.log', args);
+}
+
+/**
+ * Fields to extract for each event type
+ */
+const EVENT_FIELDS: Record<string, string[]> = {
+  'WebNavigation.onCompleted': ['tabId', 'frameId', 'url'],
+  'WebNavigation.onBeforeNavigate': ['tabId', 'frameId', 'url'],
+  'tabs.onRemoved': [],
+};
+
+/**
+ * Log an event with automatic field extraction based on event type.
+ * @param eventName - The event name (e.g., 'WebNavigation.onCompleted')
+ * @param details - The event details object
+ * @param context - Optional additional context message
+ */
+function event(eventName: string, details: object, context?: string): void {
+  const detailsRecord = details as Record<string, unknown>;
+  const fields = EVENT_FIELDS[eventName] ?? Object.keys(detailsRecord);
+  const params = fields
+    .filter((f) => f in detailsRecord)
+    .map((f) => `${f}=${detailsRecord[f]}`)
+    .join(' ');
+  const message = context ? `[${eventName}] ${params} — ${context}` : `[${eventName}] ${params}`;
+  originalConsole.log('[StreamKeys]', message);
+  sendToServer('LOG', 'Debug.event', [message]);
+}
+
+function getBrowserInfo(): string {
+  const ua = navigator.userAgent;
+  if (ua.includes('Firefox/')) {
+    const match = ua.match(/Firefox\/(\d+)/);
+    return `Firefox ${match?.[1] ?? ''}`;
+  }
+  if (ua.includes('Edg/')) {
+    const match = ua.match(/Edg\/(\d+)/);
+    return `Edge ${match?.[1] ?? ''}`;
+  }
+  if (ua.includes('Chrome/')) {
+    const match = ua.match(/Chrome\/(\d+)/);
+    return `Chrome ${match?.[1] ?? ''}`;
+  }
+  if (ua.includes('Safari/') && !ua.includes('Chrome')) {
+    const match = ua.match(/Version\/(\d+)/);
+    return `Safari ${match?.[1] ?? ''}`;
+  }
+  return 'Unknown browser';
 }
 
 function initConsoleForward(): void {
   /* eslint-disable no-console */
-  console.log('[StreamKeys] Console forwarding initialized to', DEV_SERVER_URL);
+  const browser = getBrowserInfo();
+  console.log(`[StreamKeys] Debug session started - ${browser} - ${new Date().toISOString()}`);
 
   const orig = {
     log: console.log,
@@ -53,29 +116,49 @@ function initConsoleForward(): void {
   };
 
   console.log = (...args: unknown[]) => {
-    sendToServer('LOG', args);
+    sendToServer('LOG', 'console.log', args);
     orig.log.apply(console, args);
   };
 
   console.info = (...args: unknown[]) => {
-    sendToServer('INFO', args);
+    sendToServer('INFO', 'console.info', args);
     orig.info.apply(console, args);
   };
 
   console.warn = (...args: unknown[]) => {
-    sendToServer('WARN', args);
+    sendToServer('WARN', 'console.warn', args);
     orig.warn.apply(console, args);
   };
 
   console.error = (...args: unknown[]) => {
-    sendToServer('ERROR', args);
+    sendToServer('ERROR', 'console.error', args);
     orig.error.apply(console, args);
   };
   /* eslint-enable no-console */
 }
 
+/**
+ * Wrap an event handler with automatic debug logging.
+ * The __DEV__ check is handled internally, so no need to wrap the listener.
+ * @param eventName - The event name for logging
+ * @param handler - The actual event handler
+ */
+function withDebug<T extends object>(
+  eventName: string,
+  handler: (details: T) => void
+): (details: T) => void {
+  return (details: T) => {
+    if (__DEV__) {
+      event(eventName, details);
+    }
+    handler(details);
+  };
+}
+
 // Public API
 export const Debug = {
   log,
+  event,
+  withDebug,
   initConsoleForward,
 };

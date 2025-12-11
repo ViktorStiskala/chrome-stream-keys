@@ -11,6 +11,11 @@ export interface KeyboardConfig {
   getButton?: (keyCode: string) => HTMLElement | null;
   restorePosition?: RestorePositionAPI;
   subtitles?: SubtitlesAPI;
+  /**
+   * Whether direct video.currentTime manipulation is supported.
+   * When false, custom seek will click native buttons instead.
+   */
+  supportsDirectSeek?: boolean;
 }
 
 export interface KeyboardAPI {
@@ -24,7 +29,13 @@ export interface KeyboardAPI {
  * Initialize the Keyboard feature
  */
 function initKeyboard(config: KeyboardConfig): KeyboardAPI {
-  const { getVideoElement, getButton, restorePosition, subtitles } = config;
+  const {
+    getVideoElement,
+    getButton,
+    restorePosition,
+    subtitles,
+    supportsDirectSeek = true,
+  } = config;
 
   const handleGlobalKeys = (e: KeyboardEvent) => {
     // Handle restore dialog keys first - must capture ESC before it exits fullscreen
@@ -64,37 +75,65 @@ function initKeyboard(config: KeyboardConfig): KeyboardAPI {
       return;
     }
 
+    // Handle arrow keys for seeking
+    if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') {
+      const video = getVideoElement();
+
+      // Record position before seek (always, for debouncing)
+      if (restorePosition) {
+        restorePosition.setKeyboardSeek(true);
+        const currentTime = video?._streamKeysGetStableTime?.();
+        if (currentTime !== undefined) {
+          restorePosition.recordBeforeSeek(currentTime);
+        }
+        // Reset flag when seek completes (seeked event) or after timeout as fallback
+        if (video) {
+          const resetFlag = () => {
+            restorePosition.setKeyboardSeek(false);
+            video.removeEventListener('seeked', resetFlag);
+          };
+          video.addEventListener('seeked', resetFlag, { once: true });
+          // Fallback timeout in case seeked never fires
+          setTimeout(() => {
+            video.removeEventListener('seeked', resetFlag);
+            restorePosition.setKeyboardSeek(false);
+          }, 2000);
+        } else {
+          setTimeout(() => restorePosition.setKeyboardSeek(false), 500);
+        }
+      }
+
+      // Custom seek: use video.currentTime directly (only if service supports it)
+      if (Settings.isCustomSeekEnabled() && supportsDirectSeek && video) {
+        e.preventDefault();
+        e.stopPropagation();
+        const seekTime = Settings.getSeekTime();
+        const delta = e.code === 'ArrowLeft' ? -seekTime : seekTime;
+        video.currentTime = Math.max(
+          0,
+          Math.min(video.duration || Infinity, video.currentTime + delta)
+        );
+        return;
+      }
+
+      // Default: click native button (existing behavior)
+      if (getButton) {
+        const button = getButton(e.code);
+        if (button) {
+          e.preventDefault();
+          e.stopPropagation();
+          button.click();
+        }
+      }
+      return;
+    }
+
     // Handle other keys via config
     if (!getButton) return;
 
     const button = getButton(e.code);
     if (!button) {
       return;
-    }
-
-    // Record position before keyboard skip actions (debounced)
-    if ((e.code === 'ArrowLeft' || e.code === 'ArrowRight') && restorePosition) {
-      restorePosition.setKeyboardSeek(true);
-      const video = getVideoElement();
-      const currentTime = video?._streamKeysGetStableTime?.();
-      if (currentTime !== undefined) {
-        restorePosition.recordBeforeSeek(currentTime);
-      }
-      // Reset flag when seek completes (seeked event) or after timeout as fallback
-      if (video) {
-        const resetFlag = () => {
-          restorePosition.setKeyboardSeek(false);
-          video.removeEventListener('seeked', resetFlag);
-        };
-        video.addEventListener('seeked', resetFlag, { once: true });
-        // Fallback timeout in case seeked never fires
-        setTimeout(() => {
-          video.removeEventListener('seeked', resetFlag);
-          restorePosition.setKeyboardSeek(false);
-        }, 2000);
-      } else {
-        setTimeout(() => restorePosition.setKeyboardSeek(false), 500);
-      }
     }
 
     e.preventDefault();

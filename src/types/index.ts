@@ -23,6 +23,9 @@ export interface PositionEntry {
 export interface StreamKeysSettings {
   subtitleLanguages: string[];
   positionHistoryEnabled: boolean;
+  captureMediaKeys: boolean;
+  customSeekEnabled: boolean;
+  seekTime: number;
 }
 
 // Feature flags

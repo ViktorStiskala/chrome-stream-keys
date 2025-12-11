@@ -15,6 +15,14 @@ export interface HandlerConfig {
   getPlaybackTime?: () => number | null;
   /** Custom duration getter for services where video.duration is unreliable */
   getDuration?: () => number | null;
+  /** Get seek buttons for position history tracking and custom seek override */
+  getSeekButtons?: () => { backward: HTMLElement | null; forward: HTMLElement | null };
+  /**
+   * Whether direct video.currentTime manipulation is supported.
+   * Set to false for services using MediaSource Extensions (like Disney+)
+   * where currentTime is buffer-relative. Defaults to true.
+   */
+  supportsDirectSeek?: boolean;
   subtitles?: SubtitleConfig;
   features?: FeatureFlags;
 }

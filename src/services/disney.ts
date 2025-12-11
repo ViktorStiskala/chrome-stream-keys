@@ -184,6 +184,14 @@ function initDisneyHandler(): void {
 
     getDuration: getDisneyDuration,
 
+    getSeekButtons: () => ({
+      backward: getShadowRootButton('quick-rewind'),
+      forward: getShadowRootButton('quick-fast-forward'),
+    }),
+
+    // Disney+ uses MediaSource Extensions where video.currentTime is buffer-relative
+    supportsDirectSeek: false,
+
     getButton: (keyCode: string): HTMLElement | null => {
       const selector = keyMap[keyCode];
       if (!selector) return null;
