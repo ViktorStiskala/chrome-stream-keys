@@ -32,26 +32,27 @@ function createPositionHistoryState(): PositionHistoryState {
 
 /**
  * Save a position to history
+ * @returns true if saved, false if blocked (too short, too close to existing, etc.)
  */
-function savePositionToHistory(state: PositionHistoryState, time: number): void {
-  if (!Settings.isPositionHistoryEnabled()) return;
+function savePositionToHistory(state: PositionHistoryState, time: number): boolean {
+  if (!Settings.isPositionHistoryEnabled()) return false;
 
   // Don't save very short positions
-  if (time < SEEK_MIN_DIFF_SECONDS) return;
+  if (time < SEEK_MIN_DIFF_SECONDS) return false;
 
   // Check if this position is too close to load time
   if (
     state.loadTimePosition !== null &&
     Math.abs(state.loadTimePosition - time) < SEEK_MIN_DIFF_SECONDS
   ) {
-    return;
+    return false;
   }
 
   // Check if this position is too close to ANY saved position
   const tooCloseToExisting = state.positionHistory.some(
     (entry) => Math.abs(entry.time - time) < SEEK_MIN_DIFF_SECONDS
   );
-  if (tooCloseToExisting) return;
+  if (tooCloseToExisting) return false;
 
   const entry: PositionEntry = {
     time,
@@ -67,6 +68,7 @@ function savePositionToHistory(state: PositionHistoryState, time: number): void 
   }
 
   console.info(`[StreamKeys] Seek position saved: ${entry.label}`);
+  return true;
 }
 
 /**
@@ -80,14 +82,21 @@ function recordPositionBeforeSeek(
   if (preSeekTime === undefined || preSeekTime === null) return;
 
   const now = Date.now();
+  const isWithinDebounceWindow = now - state.lastSeekTime <= SEEK_DEBOUNCE_MS;
 
   // If this is a new seek sequence (more than SEEK_DEBOUNCE_MS since last seek)
   // Save the position immediately so it's available in the restore dialog
-  if (now - state.lastSeekTime > SEEK_DEBOUNCE_MS) {
-    savePositionToHistory(state, preSeekTime);
+  if (!isWithinDebounceWindow) {
+    const saved = savePositionToHistory(state, preSeekTime);
+    // Only start debounce window if we actually saved
+    // (if blocked due to position constraints, allow next seek to try again)
+    if (saved) {
+      state.lastSeekTime = now;
+    }
+  } else {
+    // Within debounce window - extend it to keep blocking rapid seeks
+    state.lastSeekTime = now;
   }
-
-  state.lastSeekTime = now;
 }
 
 /**
@@ -161,15 +170,22 @@ function setupVideoTracking(
         return;
       }
 
-      // Apply debouncing for UI seeks as well - prevents rapid saves from multiple seeking events
+      // Apply debouncing for UI seeks - prevents rapid saves
       const now = Date.now();
-      if (now - state.lastSeekTime < SEEK_DEBOUNCE_MS) {
+      const isWithinDebounceWindow = now - state.lastSeekTime <= SEEK_DEBOUNCE_MS;
+
+      if (isWithinDebounceWindow) {
+        // Extend debounce window while actively seeking
+        state.lastSeekTime = now;
         return;
       }
-      state.lastSeekTime = now;
 
       // UI buttons and timeline clicks: save using stable time
-      savePositionToHistory(state, stableTime);
+      const saved = savePositionToHistory(state, stableTime);
+      // Only start debounce window if we actually saved
+      if (saved) {
+        state.lastSeekTime = now;
+      }
     }
   };
 
