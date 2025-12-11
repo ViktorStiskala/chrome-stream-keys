@@ -230,11 +230,12 @@ function createHandler(config: HandlerConfig): HandlerAPI {
 
             // Only override seek if custom seek enabled AND service supports direct seek
             if (Settings.isCustomSeekEnabled() && supportsDirectSeek) {
-              // Stop ALL handlers (including the native button handler)
-              e.stopImmediatePropagation();
-              e.preventDefault();
               const video = getVideoElement();
+              // Only stop propagation if we have a video to seek
+              // Otherwise let the native button handler work
               if (video) {
+                e.stopImmediatePropagation();
+                e.preventDefault();
                 const delta =
                   direction === 'backward' ? -Settings.getSeekTime() : Settings.getSeekTime();
                 video.currentTime = Math.max(

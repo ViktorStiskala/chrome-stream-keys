@@ -93,14 +93,14 @@ describe('Settings', () => {
   });
 
   describe('edge cases', () => {
-    it('getSeekTime returns default when seekTime is 0', () => {
+    it('getSeekTime returns 0 when seekTime is 0', () => {
       window.__streamKeysSettings = {
         ...EXPECTED_DEFAULTS,
         seekTime: 0,
       };
 
-      // 0 is falsy, so it falls back to default
-      expect(Settings.getSeekTime()).toBe(EXPECTED_DEFAULTS.seekTime);
+      // Uses nullish coalescing (??) so 0 is respected, only null/undefined fall back
+      expect(Settings.getSeekTime()).toBe(0);
     });
 
     it('getSubtitlePreferences returns empty array when languages is empty', () => {

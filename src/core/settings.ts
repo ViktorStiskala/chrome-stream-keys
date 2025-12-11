@@ -49,7 +49,7 @@ function isCustomSeekEnabled(): boolean {
  * Get the custom seek time in seconds
  */
 function getSeekTime(): number {
-  return getSettings().seekTime || 10;
+  return getSettings().seekTime ?? 10;
 }
 
 // Public API
