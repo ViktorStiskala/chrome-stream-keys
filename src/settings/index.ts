@@ -355,9 +355,9 @@ function init(): void {
   const customSeekRow = seekTimeInput.closest('.toggle-row') as HTMLLabelElement;
   customSeekRow.addEventListener('click', (e) => {
     const target = e.target as HTMLElement;
-    // Don't toggle if clicking on the number input or its suffix
-    if (target === seekTimeInput || target === seekTimeSuffix) {
-      e.preventDefault();
+    // Don't toggle if clicking on the number input, suffix, or checkbox itself
+    // Checkbox handles its own toggle via native behavior
+    if (target === seekTimeInput || target === seekTimeSuffix || target === customSeekToggle) {
       return;
     }
     // Manually toggle the checkbox (prevent default label behavior which would focus number input)

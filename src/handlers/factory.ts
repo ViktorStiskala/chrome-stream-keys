@@ -161,12 +161,27 @@ function createHandler(config: HandlerConfig): HandlerAPI {
         navigator.mediaSession.setActionHandler('previoustrack', () => {
           const video = getVideoElement();
           if (!video) return;
+
+          // For services with buffer-relative currentTime (like Disney+), click native button
+          if (!supportsDirectSeek) {
+            config.getSeekButtons?.().backward?.click();
+            return;
+          }
+
           const delta = Settings.isCustomSeekEnabled() ? Settings.getSeekTime() : 10;
           video.currentTime = Math.max(0, video.currentTime - delta);
         });
+        
         navigator.mediaSession.setActionHandler('nexttrack', () => {
           const video = getVideoElement();
           if (!video) return;
+
+          // For services with buffer-relative currentTime (like Disney+), click native button
+          if (!supportsDirectSeek) {
+            config.getSeekButtons?.().forward?.click();
+            return;
+          }
+
           const delta = Settings.isCustomSeekEnabled() ? Settings.getSeekTime() : 10;
           video.currentTime = Math.min(video.duration || Infinity, video.currentTime + delta);
         });
