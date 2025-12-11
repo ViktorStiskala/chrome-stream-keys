@@ -230,6 +230,8 @@ export const DisneyHandler = {
     getDuration: getDisneyDuration,
     subtitles: subtitleConfig,
     resetCache,
+    /** Disney+ uses MSE where video.currentTime is buffer-relative */
+    supportsDirectSeek: false,
   },
 };
 

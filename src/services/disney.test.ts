@@ -173,4 +173,12 @@ describe('DisneyHandler', () => {
       expect(duration).toBeNull();
     });
   });
+
+  describe('supportsDirectSeek', () => {
+    it('is false because Disney+ uses MediaSource Extensions', () => {
+      // Disney+ video.currentTime is buffer-relative, not actual playback time
+      // Custom seek time must use native buttons, not direct currentTime manipulation
+      expect(DisneyHandler._test.supportsDirectSeek).toBe(false);
+    });
+  });
 });
