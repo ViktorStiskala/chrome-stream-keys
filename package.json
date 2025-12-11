@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
+    "dev:firefox": "BROWSER=firefox vite dev",
     "build": "vite build",
     "build:firefox": "BROWSER=firefox vite build",
     "typecheck": "tsc --noEmit",

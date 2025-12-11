@@ -72,23 +72,46 @@ export default defineConfig({
       additionalInputs: ['src/services/disney.ts', 'src/services/hbomax.ts'],
       // Target browser for manifest transformations and web-ext
       browser,
+      // Transform manifest for Firefox compatibility (service_worker -> scripts)
+      transformManifest: (manifest) => {
+        if (browser === 'firefox' && manifest.background) {
+          const bg = manifest.background as { service_worker?: string; scripts?: string[] };
+          if (bg.service_worker) {
+            // Create new background object with scripts instead of service_worker
+            manifest.background = { scripts: [bg.service_worker] };
+          }
+        }
+        return manifest;
+      },
       // Add web-ext configuration for profile persistence
       webExtConfig: {
+        // Target browser for web-ext run
+        target: browser === 'firefox' ? 'firefox-desktop' : 'chromium',
         // Keep changes to a temporary profile across sessions
         keepProfileChanges: true,
-        profileCreateIfMissing: true,
-        // Use a dedicated dev profile directory
-        chromiumProfile: '.chrome-profile',
+        // Use dedicated dev profile directories per browser
+        ...(browser === 'firefox'
+          ? {
+              // Firefox: create profile in build directory (web-ext compatible path)
+              firefoxProfile: resolve(__dirname, 'build/dev/firefox/profile'),
+              profileCreateIfMissing: true,
+            }
+          : {
+              chromiumProfile: '.chrome-profile',
+              profileCreateIfMissing: true,
+            }),
         // Optional: Set a starting URL after browser launches
         startUrl: ['https://play.hbomax.com/'],
-        // Disable web security to allow debug log forwarding to localhost
+        // Chromium-specific: Disable web security to allow debug log forwarding to localhost
         // Note: Requires fresh profile (chromiumProfile) to take effect
-        args: [
-          '--disable-web-security',
-          '--disable-site-isolation-trials',
-          '--allow-running-insecure-content',
-          '--hide-crash-restore-bubble',
-        ],
+        ...(browser !== 'firefox' && {
+          args: [
+            '--disable-web-security',
+            '--disable-site-isolation-trials',
+            '--allow-running-insecure-content',
+            '--hide-crash-restore-bubble',
+          ],
+        }),
       },
     }),
     copyLogos(),

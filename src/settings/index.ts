@@ -7,6 +7,27 @@ const POSITION_HISTORY_KEY = 'positionHistoryEnabled';
 const DEFAULT_LANGUAGES = ['English', 'English [CC]', 'English CC'];
 const DEFAULT_POSITION_HISTORY = true;
 
+// Use storage.local as fallback if storage.sync fails (Firefox temporary add-ons)
+async function getStorage(): Promise<typeof browser.storage.sync> {
+  try {
+    // Test if sync works by doing a simple get
+    await browser.storage.sync.get(null);
+    return browser.storage.sync;
+  } catch {
+    console.warn('[StreamKeys] storage.sync unavailable, using storage.local');
+    return browser.storage.local;
+  }
+}
+
+// Cache the storage area to avoid repeated tests
+let storageArea: typeof browser.storage.sync | null = null;
+async function storage(): Promise<typeof browser.storage.sync> {
+  if (!storageArea) {
+    storageArea = await getStorage();
+  }
+  return storageArea;
+}
+
 let languages: string[] = [];
 let draggedIndex: number | null = null;
 
@@ -21,30 +42,49 @@ let positionHistoryToggle: HTMLInputElement;
  * Load preferences from storage
  */
 async function loadPreferences(): Promise<void> {
-  const result = await browser.storage.sync.get([STORAGE_KEY, POSITION_HISTORY_KEY]);
-  languages = (result[STORAGE_KEY] as string[] | undefined) || [...DEFAULT_LANGUAGES];
+  try {
+    const store = await storage();
+    const result = await store.get([STORAGE_KEY, POSITION_HISTORY_KEY]);
+    languages = (result[STORAGE_KEY] as string[] | undefined) || [...DEFAULT_LANGUAGES];
 
-  const positionHistoryEnabled =
-    result[POSITION_HISTORY_KEY] !== undefined
-      ? (result[POSITION_HISTORY_KEY] as boolean)
-      : DEFAULT_POSITION_HISTORY;
-  positionHistoryToggle.checked = positionHistoryEnabled;
+    const positionHistoryEnabled =
+      result[POSITION_HISTORY_KEY] !== undefined
+        ? (result[POSITION_HISTORY_KEY] as boolean)
+        : DEFAULT_POSITION_HISTORY;
+    positionHistoryToggle.checked = positionHistoryEnabled;
 
-  renderList();
+    renderList();
+  } catch (error) {
+    console.error('[StreamKeys] Failed to load preferences:', error);
+    // Fall back to defaults on error
+    languages = [...DEFAULT_LANGUAGES];
+    positionHistoryToggle.checked = DEFAULT_POSITION_HISTORY;
+    renderList();
+  }
 }
 
 /**
  * Save preferences to storage
  */
 async function savePreferences(): Promise<void> {
-  await browser.storage.sync.set({ [STORAGE_KEY]: languages });
+  try {
+    const store = await storage();
+    await store.set({ [STORAGE_KEY]: languages });
+  } catch (error) {
+    console.error('[StreamKeys] Failed to save preferences:', error);
+  }
 }
 
 /**
  * Save position history setting
  */
 async function savePositionHistorySetting(): Promise<void> {
-  await browser.storage.sync.set({ [POSITION_HISTORY_KEY]: positionHistoryToggle.checked });
+  try {
+    const store = await storage();
+    await store.set({ [POSITION_HISTORY_KEY]: positionHistoryToggle.checked });
+  } catch (error) {
+    console.error('[StreamKeys] Failed to save position history setting:', error);
+  }
 }
 
 /**

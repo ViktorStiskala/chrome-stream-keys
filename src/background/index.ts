@@ -17,6 +17,16 @@ const POSITION_HISTORY_KEY = 'positionHistoryEnabled';
 const DEFAULT_LANGUAGES = ['English', 'English [CC]', 'English CC'];
 const DEFAULT_POSITION_HISTORY = true;
 
+// Use storage.local as fallback if storage.sync fails (Firefox temporary add-ons)
+async function getStorage(): Promise<typeof browser.storage.sync> {
+  try {
+    await browser.storage.sync.get(null);
+    return browser.storage.sync;
+  } catch {
+    return browser.storage.local;
+  }
+}
+
 // Track injected tabs to prevent double injection
 const injectedTabs = new Map<number, string>();
 
@@ -44,8 +54,9 @@ function findHandler(url: string): ServiceHandler | undefined {
  * Inject settings and handler scripts into a tab
  */
 async function injectHandler(tabId: number, handlerFile: string): Promise<void> {
-  // Read settings from storage
-  const result = await browser.storage.sync.get([STORAGE_KEY, POSITION_HISTORY_KEY]);
+  // Read settings from storage (with fallback to local)
+  const store = await getStorage();
+  const result = await store.get([STORAGE_KEY, POSITION_HISTORY_KEY]);
   const settings: StreamKeysSettings = {
     subtitleLanguages: (result[STORAGE_KEY] as string[] | undefined) || DEFAULT_LANGUAGES,
     positionHistoryEnabled:
