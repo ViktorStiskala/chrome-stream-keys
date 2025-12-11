@@ -171,7 +171,7 @@ function createHandler(config: HandlerConfig): HandlerAPI {
           const delta = Settings.isCustomSeekEnabled() ? Settings.getSeekTime() : 10;
           video.currentTime = Math.max(0, video.currentTime - delta);
         });
-        
+
         navigator.mediaSession.setActionHandler('nexttrack', () => {
           const video = getVideoElement();
           if (!video) return;
