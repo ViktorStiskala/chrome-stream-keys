@@ -2,7 +2,7 @@
 
 # Stream Keys
 
-Stream Keys makes keyboard shortcuts work reliably on Disney+ and HBO Max. It fixes broken spacebar behavior, keeps shortcuts working after fullscreen, adds quick subtitle toggling, and lets you jump back to previous positions.
+A browser extension that brings YouTube-style keyboard shortcuts to streaming services. Fixes broken spacebar behavior, adds quick subtitle toggling, and lets you jump back to previous positions.
 
 ![hero_banner](./assets/hero_banner.png)
 
@@ -25,7 +25,7 @@ Stream Keys adds a reliable layer of keyboard handling on top of the player, so 
 
 - **HBO Max**
   - Fixes unreliable `Space` behavior and adds `C` for subtitles and `F` for fullscreen.
-  - Keeps the built-in Left/Right arrow skipping and makes shortcuts continue working in and after fullscreen without needing to click the player again.
+  - The HBO Max player already supports Left/Right arrow keys for skipping.
 
 ## Features
 
@@ -88,24 +88,16 @@ The dialog shows:
 **Settings:**
 - Position history can be disabled in the extension settings (right-click icon → Options)
 
-## Installation
+## Installation (Google Chrome)
 
-### From Releases
+> [!CAUTION]
+> Always carefully review the extension code before installing from unofficial sources. For automated security reviews, use an official extension store instead.
 
-1. Go to [releases page](https://github.com/ViktorStiskala/chrome-stream-keys/releases/latest) and download the ZIP file.
-2. Extract ZIP to destination folder.
+1. Go to [releases page](https://github.com/ViktorStiskala/chrome-stream-keys/releases/latest) and download the ZIP archive for your browser.
+2. Choose a permanent location and extract the ZIP there. The extension loads directly from this folder, so it must not be removed.
 3. Open Chrome and navigate to `chrome://extensions/`
-4. Enable "Developer mode" in the top right
-5. Click "Load unpacked" and select the extension folder
-
-### From Source
-
-1. Clone or download this repository
-2. Install dependencies: `npm install`
-3. Build the extension: `npm run build`
-4. Open Chrome and navigate to `chrome://extensions/`
-5. Enable "Developer mode" in the top right
-6. Click "Load unpacked" and select the `build/chrome/extension` folder
+4. Enable "Developer mode" in the top right.
+5. Click "Load unpacked" and select the extension folder.
 
 ## Permissions
 
