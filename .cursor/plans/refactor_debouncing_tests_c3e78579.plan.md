@@ -44,9 +44,9 @@ Current tests have several issues:
 ### Disney+ Fixture (`resources/dom/disney.html`)
 
 - **Empty custom elements** that need Shadow DOM attached:
-        - `<quick-rewind class="quick-rewind"></quick-rewind>`
-        - `<quick-fast-forward class="quick-fast-forward"></quick-fast-forward>`
-        - `<progress-bar></progress-bar>`
+                                - `<quick-rewind class="quick-rewind"></quick-rewind>`
+                                - `<quick-fast-forward class="quick-fast-forward"></quick-fast-forward>`
+                                - `<progress-bar></progress-bar>`
 - Must attach Shadow DOM with correct internal structure (`info-tooltip > button`)
 - Player: `disney-web-player`
 - Video: `video.hive-video`

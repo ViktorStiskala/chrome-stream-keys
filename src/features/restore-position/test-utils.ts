@@ -4,15 +4,25 @@
  */
 
 import { vi } from 'vitest';
-import { resetFixture, createMockVideo, simulateVideoLoad, type MockVideoElement } from '@test';
+import userEvent from '@testing-library/user-event';
+import {
+  resetFixture,
+  createMockVideo,
+  simulateVideoLoad,
+  loadFixture,
+  attachDisneyShadowDOM,
+  type MockVideoElement,
+} from '@test';
 import { RestorePosition, type RestorePositionAPI } from './index';
 import {
   LOAD_TIME_CAPTURE_DELAY_MS,
   READY_FOR_TRACKING_DELAY_MS,
   SEEK_MIN_DIFF_SECONDS,
+  STABLE_TIME_DELAY_MS,
 } from './history';
 import { RestoreDialog } from './dialog';
 import { Video } from '@/core/video';
+import { Handler } from '@/handlers';
 import type { StreamKeysVideoElement } from '@/types';
 
 // Re-export commonly used imports for convenience
@@ -22,6 +32,7 @@ export {
   simulateSeek,
   simulateVideoLoad,
   loadFixture,
+  attachDisneyShadowDOM,
   type MockVideoElement,
 } from '@test';
 export { RestorePosition, type RestorePositionAPI } from './index';
@@ -31,9 +42,11 @@ export {
   SEEK_DEBOUNCE_MS,
   LOAD_TIME_CAPTURE_DELAY_MS,
   READY_FOR_TRACKING_DELAY_MS,
+  STABLE_TIME_DELAY_MS,
 } from './history';
 export { DIALOG_ID, CURRENT_TIME_ID, RELATIVE_TIME_CLASS, RestoreDialog } from './dialog';
 export { Video } from '@/core/video';
+export { Handler } from '@/handlers';
 export type { StreamKeysVideoElement } from '@/types';
 
 /**
@@ -139,4 +152,203 @@ export async function initAndWaitForReady(ctx: TestContext): Promise<void> {
     augmentedVideo._streamKeysStableTime = augmentedVideo.currentTime;
     augmentedVideo._streamKeysLastKnownTime = augmentedVideo.currentTime;
   }
+}
+
+// =============================================================================
+// Service Test Context and Setup Helpers
+// =============================================================================
+
+/**
+ * Test context for service-specific tests with real DOM fixtures.
+ * Used by setupHBOMaxTest() and setupDisneyPlusTest().
+ */
+export interface ServiceTestContext {
+  name: string;
+  video: MockVideoElement;
+  player: HTMLElement;
+  handler: { cleanup: () => void };
+  getSeekButtons: () => { backward: HTMLElement | null; forward: HTMLElement | null };
+  /** Disney+ only: update progress bar time */
+  setProgressBarTime?: (seconds: number) => void;
+  supportsDirectSeek: boolean;
+}
+
+/**
+ * Set up HBO Max test using real fixture from resources/dom/hbomax.html.
+ * Fixture already has buttons with data-testid attributes.
+ */
+export function setupHBOMaxTest(): ServiceTestContext {
+  // Load real fixture from resources/dom/hbomax.html
+  loadFixture('hbomax');
+
+  const player = document.querySelector<HTMLElement>('[data-testid="playerContainer"]')!;
+  const video = createMockVideo({
+    currentTime: 200,
+    duration: 7200,
+    readyState: 4,
+    src: 'blob:https://play.hbomax.com/test',
+  });
+
+  // Replace fixture's video with mock
+  const existingVideo = player.querySelector('video');
+  existingVideo?.replaceWith(video);
+
+  const getSeekButtons = () => ({
+    backward: document.querySelector<HTMLElement>(
+      'button[data-testid="player-ux-skip-back-button"]'
+    ),
+    forward: document.querySelector<HTMLElement>(
+      'button[data-testid="player-ux-skip-forward-button"]'
+    ),
+  });
+
+  const handler = Handler.create({
+    name: 'HBO Max',
+    getPlayer: () => player,
+    getVideo: () => video,
+    getSeekButtons,
+    supportsDirectSeek: true,
+    getButton: (code: string) => {
+      if (code === 'ArrowLeft') return getSeekButtons().backward;
+      if (code === 'ArrowRight') return getSeekButtons().forward;
+      return null;
+    },
+  });
+
+  return { name: 'HBO Max', video, player, handler, getSeekButtons, supportsDirectSeek: true };
+}
+
+/**
+ * Set up Disney+ test using real fixture from resources/dom/disney.html.
+ * Fixture has empty custom elements - attach Shadow DOM after loading.
+ */
+export function setupDisneyPlusTest(): ServiceTestContext {
+  // Load real fixture from resources/dom/disney.html
+  loadFixture('disney');
+
+  // Attach Shadow DOM to fixture's empty custom elements
+  const { setProgressBarTime } = attachDisneyShadowDOM();
+
+  const player = document.querySelector<HTMLElement>('disney-web-player')!;
+  const video = createMockVideo({
+    currentTime: 0,
+    duration: 7200,
+    readyState: 4,
+    src: 'blob:https://www.disneyplus.com/test',
+  });
+  video.classList.add('hive-video');
+
+  // Replace fixture's video with mock
+  const existingVideo = player.querySelector('video.hive-video') || player.querySelector('video');
+  existingVideo?.replaceWith(video);
+
+  const getSeekButtons = () => ({
+    backward:
+      document
+        .querySelector('quick-rewind')
+        ?.shadowRoot?.querySelector<HTMLElement>('info-tooltip button') ?? null,
+    forward:
+      document
+        .querySelector('quick-fast-forward')
+        ?.shadowRoot?.querySelector<HTMLElement>('info-tooltip button') ?? null,
+  });
+
+  // Disney+ getPlaybackTime reads from progress bar Shadow DOM
+  const getPlaybackTime = () => {
+    const thumb = document
+      .querySelector('progress-bar')
+      ?.shadowRoot?.querySelector('.progress-bar__thumb');
+    return thumb ? parseInt(thumb.getAttribute('aria-valuenow') || '0', 10) : null;
+  };
+
+  const handler = Handler.create({
+    name: 'Disney+',
+    getPlayer: () => player,
+    getVideo: () => video,
+    getPlaybackTime,
+    getDuration: () => 7200,
+    getSeekButtons,
+    supportsDirectSeek: false,
+    getButton: (code: string) => {
+      if (code === 'ArrowLeft') return getSeekButtons().backward;
+      if (code === 'ArrowRight') return getSeekButtons().forward;
+      return null;
+    },
+  });
+
+  setProgressBarTime(200);
+  return {
+    name: 'Disney+',
+    video,
+    player,
+    handler,
+    getSeekButtons,
+    setProgressBarTime,
+    supportsDirectSeek: false,
+  };
+}
+
+// =============================================================================
+// User Action Helpers
+// =============================================================================
+
+/**
+ * Create a userEvent instance configured for fake timers.
+ */
+export function createUserEventInstance() {
+  return userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+}
+
+/**
+ * Press arrow key - fires realistic keydown/keypress/keyup sequence.
+ */
+export async function pressArrowKey(
+  user: ReturnType<typeof userEvent.setup>,
+  direction: 'left' | 'right'
+) {
+  const key = direction === 'left' ? '{ArrowLeft}' : '{ArrowRight}';
+  await user.keyboard(key);
+}
+
+/**
+ * Click skip button using pointerdown (matches real handler interception).
+ * The handler intercepts pointerdown, not click events.
+ */
+export async function clickSkipButton(
+  user: ReturnType<typeof userEvent.setup>,
+  direction: 'backward' | 'forward',
+  ctx: ServiceTestContext
+) {
+  const buttons = ctx.getSeekButtons();
+  const button = direction === 'backward' ? buttons.backward : buttons.forward;
+  if (button) {
+    await user.pointer({ keys: '[MouseLeft>]', target: button });
+    await user.pointer({ keys: '[/MouseLeft]', target: button });
+  }
+}
+
+/**
+ * Simulate timeline click (direct seeking, NOT through buttons).
+ * This fires the video's seeking/seeked events directly.
+ */
+export function clickTimeline(video: MockVideoElement, toTime: number) {
+  video._setSeeking(true);
+  video.dispatchEvent(new Event('seeking'));
+  video._setCurrentTime(toTime);
+  video._setSeeking(false);
+  video.dispatchEvent(new Event('seeked'));
+}
+
+/**
+ * Advance playback and let RAF loop update stable time.
+ * Updates both video currentTime and Disney+ progress bar if available.
+ */
+export function advancePlayback(
+  ctx: ServiceTestContext,
+  toTime: number,
+  advanceMs: number = STABLE_TIME_DELAY_MS + 100
+) {
+  ctx.video._simulatePlayback(toTime);
+  ctx.setProgressBarTime?.(toTime);
+  vi.advanceTimersByTime(advanceMs);
 }
