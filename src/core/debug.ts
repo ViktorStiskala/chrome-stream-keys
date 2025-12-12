@@ -56,6 +56,18 @@ function log(...args: unknown[]): void {
 }
 
 /**
+ * Log a user action (key press, button click, etc.)
+ * These are always logged, even in rapid succession, to track user behavior.
+ * @param action - Short description of the action (e.g., 'Key: ArrowLeft', 'UI: Forward button clicked')
+ * @param details - Optional additional details
+ */
+function action(actionName: string, details?: string): void {
+  const message = details ? `[Action] ${actionName} — ${details}` : `[Action] ${actionName}`;
+  originalConsole.log('[StreamKeys]', message);
+  sendToServer('LOG', 'Debug.action', [message]);
+}
+
+/**
  * Fields to extract for each event type
  */
 const EVENT_FIELDS: Record<string, string[]> = {
@@ -158,6 +170,7 @@ function withDebug<T extends object>(
 // Public API
 export const Debug = {
   log,
+  action,
   event,
   withDebug,
   initConsoleForward,

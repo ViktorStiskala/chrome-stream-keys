@@ -2,10 +2,13 @@
 
 import type { StreamKeysVideoElement } from '@/types';
 import { Banner } from '@/ui/banner';
-import { Video } from '@/core/video';
+import { Debug, Video } from '@/core';
 import { Styles } from '@/ui/styles/variables';
 import { DialogStyles } from './styles';
 import { PositionHistory, type PositionHistoryState, type RestorePosition } from './history';
+
+// __DEV__ is defined by vite config based on isWatch
+declare const __DEV__: boolean;
 
 // Exported for testing
 export const DIALOG_ID = 'streamkeys-restore-dialog';
@@ -98,6 +101,7 @@ function createPositionItem(
   item.appendChild(progressBar);
 
   item.onclick = (e) => {
+    if (__DEV__) Debug.action(`UI: Position ${keyNumber} clicked`, pos.label);
     e.preventDefault();
     e.stopPropagation();
     onClick();
@@ -149,6 +153,7 @@ function createRestoreDialog(
   closeButton.onmouseenter = () => (closeButton.style.color = Styles.vars.text.primary);
   closeButton.onmouseleave = () => (closeButton.style.color = Styles.vars.text.secondary);
   closeButton.onclick = (e) => {
+    if (__DEV__) Debug.action('UI: Close button', 'restore dialog');
     e.preventDefault();
     e.stopPropagation();
     closeRestoreDialog();
@@ -247,6 +252,7 @@ function handleRestoreDialogKeys(
 
   // Handle Escape - close dialog
   if (e.code === 'Escape') {
+    if (__DEV__) Debug.action('Key: Escape', 'close restore dialog');
     e.preventDefault();
     e.stopPropagation();
     closeRestoreDialog();
@@ -255,6 +261,7 @@ function handleRestoreDialogKeys(
 
   // Handle R key - close dialog
   if (e.code === 'KeyR') {
+    if (__DEV__) Debug.action('Key: R', 'close restore dialog');
     e.preventDefault();
     e.stopPropagation();
     closeRestoreDialog();
@@ -271,6 +278,7 @@ function handleRestoreDialogKeys(
     const position = allPositions[keyNum];
 
     if (position) {
+      if (__DEV__) Debug.action(`Key: ${keyNum}`, `restore to ${position.label}`);
       const video = getVideoElement();
       restorePosition(video, position.time);
       closeRestoreDialog();

@@ -196,6 +196,11 @@ browser.webNavigation.onCompleted.addListener(handleNavigationComplete);
 browser.tabs.onRemoved.addListener(handleTabRemoved);
 browser.webNavigation.onBeforeNavigate.addListener(handleBeforeNavigate);
 
+// Open settings when clicking the extension icon
+browser.action.onClicked.addListener(() => {
+  browser.runtime.openOptionsPage();
+});
+
 /**
  * Inject into existing tabs on extension startup
  * Handles tabs opened before the extension's service worker was ready

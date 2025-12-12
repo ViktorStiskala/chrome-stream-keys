@@ -17,8 +17,8 @@ export interface RestorePositionAPI {
   closeDialog: () => void;
   /** Check if dialog is open */
   isDialogOpen: () => boolean;
-  /** Record position before seek (for keyboard seeks) */
-  recordBeforeSeek: (preSeekTime: number | undefined) => void;
+  /** Record position before seek (for keyboard seeks). Returns true if debounced. */
+  recordBeforeSeek: (preSeekTime: number | undefined) => boolean;
   /** Mark that a keyboard/button seek is happening */
   setKeyboardSeek: (value: boolean) => void;
   /** Handle keyboard events for the dialog */
@@ -82,7 +82,7 @@ function initRestorePosition(config: RestorePositionConfig): RestorePositionAPI 
     closeDialog: RestoreDialog.close,
     isDialogOpen: RestoreDialog.isOpen,
     recordBeforeSeek: (preSeekTime) => {
-      PositionHistory.record(state, preSeekTime);
+      return PositionHistory.record(state, preSeekTime);
     },
     setKeyboardSeek: (value) => {
       state.isKeyboardOrButtonSeek = value;

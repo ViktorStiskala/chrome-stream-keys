@@ -2,6 +2,7 @@
 
 import type { CleanupFn } from '@/types';
 import {
+  Debug,
   Focus,
   Fullscreen,
   Player,
@@ -27,6 +28,13 @@ const MEDIA_SESSION_SETUP_INTERVAL = 5000;
 
 /** Interval for UI button interception setup (ms) */
 const BUTTON_INTERCEPTION_INTERVAL = 2000;
+
+/**
+ * Timeout for resetting keyboard seek flag in Media Session and button handlers (ms).
+ * Uses a simple timeout (not 'seeked' event) because these handlers fire once per action
+ * and don't need precise seek completion detection.
+ */
+const POSITION_TRACK_TIMEOUT_MS = 500;
 
 /**
  * Create a handler with composable features
@@ -146,6 +154,43 @@ function createHandler(config: HandlerConfig): HandlerAPI {
   const cleanupPlayerInterval = Player.createSetupInterval(playerSetupConfig, playerState);
   cleanupFns.push(cleanupPlayerInterval);
 
+  /**
+   * Track position before seeking for position history.
+   * Uses a simple timeout (not 'seeked' event) because Media Session and button handlers
+   * fire once per action and don't need precise seek completion detection.
+   *
+   * IMPORTANT: We only extend the timeout when the save is debounced (rapid clicks).
+   * - First click: saves position, schedules short timeout to reset flag
+   * - Subsequent clicks (debounced): extends the timeout to keep flag true
+   * This prevents handleSeeking from saving duplicate positions when the user
+   * clicks rapidly.
+   */
+  let positionTrackTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  const trackPositionBeforeSeek = (video: HTMLVideoElement | null) => {
+    if (!restorePositionAPI) return;
+
+    restorePositionAPI.setKeyboardSeek(true);
+    const currentTime = (video as ReturnType<typeof getVideoElement>)?._streamKeysGetStableTime?.();
+
+    let wasDebounced = false;
+    if (currentTime !== undefined) {
+      wasDebounced = restorePositionAPI.recordBeforeSeek(currentTime);
+    }
+
+    // Only extend timeout if this click was debounced (rapid clicking)
+    // For non-debounced saves (first click), use a fresh timeout
+    if (wasDebounced && positionTrackTimeoutId !== null) {
+      clearTimeout(positionTrackTimeoutId);
+    }
+
+    // Schedule reset - if debounced, this extends the window; otherwise starts fresh
+    positionTrackTimeoutId = setTimeout(() => {
+      restorePositionAPI!.setKeyboardSeek(false);
+      positionTrackTimeoutId = null;
+    }, POSITION_TRACK_TIMEOUT_MS);
+  };
+
   // Media Session handlers (when capture enabled)
   if (Settings.isMediaKeysCaptureEnabled() && navigator.mediaSession) {
     console.info(`[StreamKeys] Media keys captured for ${config.name} player`);
@@ -153,14 +198,22 @@ function createHandler(config: HandlerConfig): HandlerAPI {
     const setupMediaSession = (logEnabled: boolean) => {
       try {
         navigator.mediaSession.setActionHandler('play', () => {
+          if (__DEV__) Debug.action('Media key: Play');
           getVideoElement()?.play();
         });
         navigator.mediaSession.setActionHandler('pause', () => {
+          if (__DEV__) Debug.action('Media key: Pause');
           getVideoElement()?.pause();
         });
+
         navigator.mediaSession.setActionHandler('previoustrack', () => {
           const video = getVideoElement();
           if (!video) return;
+
+          const delta = Settings.isCustomSeekEnabled() ? Settings.getSeekTime() : 10;
+          if (__DEV__) Debug.action('Media key: Previous track', `seek backward ${delta}s`);
+
+          trackPositionBeforeSeek(video);
 
           // For services with buffer-relative currentTime (like Disney+), click native button
           if (!supportsDirectSeek) {
@@ -168,7 +221,6 @@ function createHandler(config: HandlerConfig): HandlerAPI {
             return;
           }
 
-          const delta = Settings.isCustomSeekEnabled() ? Settings.getSeekTime() : 10;
           video.currentTime = Math.max(0, video.currentTime - delta);
         });
 
@@ -176,13 +228,17 @@ function createHandler(config: HandlerConfig): HandlerAPI {
           const video = getVideoElement();
           if (!video) return;
 
+          const delta = Settings.isCustomSeekEnabled() ? Settings.getSeekTime() : 10;
+          if (__DEV__) Debug.action('Media key: Next track', `seek forward ${delta}s`);
+
+          trackPositionBeforeSeek(video);
+
           // For services with buffer-relative currentTime (like Disney+), click native button
           if (!supportsDirectSeek) {
             config.getSeekButtons?.().forward?.click();
             return;
           }
 
-          const delta = Settings.isCustomSeekEnabled() ? Settings.getSeekTime() : 10;
           video.currentTime = Math.min(video.duration || Infinity, video.currentTime + delta);
         });
         if (__DEV__ && logEnabled) {
@@ -214,35 +270,28 @@ function createHandler(config: HandlerConfig): HandlerAPI {
         if (!button || interceptedButtons.has(button)) return;
         interceptedButtons.add(button);
 
+        // Use pointerdown instead of click to capture position BEFORE the service's
+        // event handlers fire. Many services use mousedown/pointerdown to trigger seeks,
+        // so by the time 'click' fires, the seek has already started.
         button.addEventListener(
-          'click',
+          'pointerdown',
           (e) => {
-            // Always track for position history
-            if (restorePositionAPI) {
-              restorePositionAPI.setKeyboardSeek(true);
-              const video = getVideoElement();
-              const currentTime = video?._streamKeysGetStableTime?.();
-              if (currentTime !== undefined) {
-                restorePositionAPI.recordBeforeSeek(currentTime);
-              }
-              setTimeout(() => restorePositionAPI!.setKeyboardSeek(false), 500);
-            }
+            const seekTime = Settings.isCustomSeekEnabled() ? Settings.getSeekTime() : 10;
+            if (__DEV__) Debug.action(`UI: ${direction} button`, `seek ${seekTime}s`);
+
+            const video = getVideoElement();
+            trackPositionBeforeSeek(video);
 
             // Only override seek if custom seek enabled AND service supports direct seek
-            if (Settings.isCustomSeekEnabled() && supportsDirectSeek) {
-              const video = getVideoElement();
-              // Only stop propagation if we have a video to seek
-              // Otherwise let the native button handler work
-              if (video) {
-                e.stopImmediatePropagation();
-                e.preventDefault();
-                const delta =
-                  direction === 'backward' ? -Settings.getSeekTime() : Settings.getSeekTime();
-                video.currentTime = Math.max(
-                  0,
-                  Math.min(video.duration || Infinity, video.currentTime + delta)
-                );
-              }
+            if (Settings.isCustomSeekEnabled() && supportsDirectSeek && video) {
+              e.stopImmediatePropagation();
+              e.preventDefault();
+              const delta =
+                direction === 'backward' ? -Settings.getSeekTime() : Settings.getSeekTime();
+              video.currentTime = Math.max(
+                0,
+                Math.min(video.duration || Infinity, video.currentTime + delta)
+              );
             }
           },
           true

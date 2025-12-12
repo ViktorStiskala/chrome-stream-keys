@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite dev",
-    "dev:firefox": "BROWSER=firefox vite dev",
+    "dev": "rm -f .chrome-profile/{chrome.pid,SingletonLock,SingletonCookie,SingletonSocket} && vite dev",
+    "dev:firefox": "rm -rf build/dev/firefox/profile && cp -r .firefox-profile build/dev/firefox/profile && BROWSER=firefox vite dev",
     "build": "vite build",
     "build:firefox": "BROWSER=firefox vite build",
     "typecheck": "tsc --noEmit",
