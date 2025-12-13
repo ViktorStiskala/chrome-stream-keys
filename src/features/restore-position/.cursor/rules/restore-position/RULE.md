@@ -2,9 +2,10 @@
 description: Position Restore Feature - History and Dialog
 globs:
   - "**/restore-position/**/*.ts"
+  - "!**/*.test.ts"
 ---
 
-# Position Restore Feature Notes
+# Position Restore Feature
 
 ## Position History Algorithm
 
@@ -105,15 +106,8 @@ This method is used by both keyboard seeks and timeline/UI seeks for consistent 
 - `_streamKeysSeekListenerAdded`: Prevents duplicate listeners
 - `_streamKeysReadyForTracking`: True after initial load complete
 
-## Testing
+## Exported Constants
 
-### Test File Location
-
-Tests are co-located at `src/features/restore-position/history.test.ts`.
-
-### Exported Constants and Helpers
-
-The following are exported for use in tests:
 ```typescript
 import {
   PositionHistory,
@@ -126,60 +120,4 @@ import {
 // - PositionHistory.save(state, time) - direct save, no debounce
 // - PositionHistory.record(state, time) - save with debounce
 // - PositionHistory.debouncedSave(state, time) - returns true if debounced, false if save attempted
-```
-
-### Testing Pattern
-
-**Always use exported constants instead of hardcoded values:**
-```typescript
-// ✅ CORRECT: Use constants
-it('does NOT save position below threshold', () => {
-  PositionHistory.save(state, SEEK_MIN_DIFF_SECONDS - 5);
-  expect(state.positionHistory).toHaveLength(0);
-});
-
-// ❌ WRONG: Hardcoded value
-it('does NOT save position below threshold', () => {
-  PositionHistory.save(state, 10); // Magic number!
-  expect(state.positionHistory).toHaveLength(0);
-});
-```
-
-### Debounce Test Requirements
-
-**When testing debounce logic, positions MUST exceed SEEK_MIN_DIFF_SECONDS to avoid false positives:**
-```typescript
-// ✅ CORRECT: Explicit position calculation ensures we test debounce, not proximity
-const position1 = SEEK_MIN_DIFF_SECONDS + 100;
-const position2 = position1 + SEEK_MIN_DIFF_SECONDS + 100;
-expect(position2 - position1).toBeGreaterThan(SEEK_MIN_DIFF_SECONDS);
-
-// ❌ WRONG: Positions might be blocked by proximity, not debounce
-const position1 = 100;
-const position2 = 110; // Only 10s apart - blocked by proximity!
-```
-
-### Time-based Test Guidelines
-
-**Use relative time comparisons, not absolute values:**
-```typescript
-// ✅ CORRECT: Relative comparison
-const timeAfterFirstSave = state.lastSeekTime;
-vi.advanceTimersByTime(2000);
-PositionHistory.record(state, position2);
-expect(state.lastSeekTime).toBe(timeAfterFirstSave + 2000);
-
-// ❌ WRONG: Assumes specific starting time
-expect(state.lastSeekTime).toBe(0);
-```
-
-### Mock Requirements
-
-The tests mock `@/core/settings`:
-```typescript
-vi.mock('@/core/settings', () => ({
-  Settings: {
-    isPositionHistoryEnabled: vi.fn(() => true),
-  },
-}));
 ```

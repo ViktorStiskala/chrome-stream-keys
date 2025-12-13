@@ -196,6 +196,15 @@ export function simulateSeek(video: MockVideoElement, toTime: number): void {
 }
 
 /**
+ * Simulate just the seeked event (seek completion).
+ * Use when the seek was initiated elsewhere (e.g., keyboard handler)
+ * and you only need to signal completion.
+ */
+export function simulateSeeked(video: MockVideoElement): void {
+  video.dispatchEvent(new Event('seeked'));
+}
+
+/**
  * Simulate the realistic video load sequence:
  * 1. Video loads at 0:00
  * 2. Fires canplay event

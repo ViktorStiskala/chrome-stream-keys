@@ -65,7 +65,7 @@ function createDebugImpl() {
     }).catch((err) => {
       if (!connectionErrorLogged) {
         connectionErrorLogged = true;
-        // eslint-disable-next-line no-console
+
         console.warn(
           '[StreamKeys] Debug server connection failed (CSP may be blocking):',
           err.message || err

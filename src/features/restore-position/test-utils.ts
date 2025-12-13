@@ -30,6 +30,7 @@ export {
   resetFixture,
   createMockVideo,
   simulateSeek,
+  simulateSeeked,
   simulateVideoLoad,
   loadFixture,
   attachDisneyShadowDOM,

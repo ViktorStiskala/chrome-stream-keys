@@ -21,6 +21,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import {
   resetFixture,
+  simulateSeeked,
   setupHBOMaxTest,
   setupDisneyPlusTest,
   pressArrowKey,
@@ -33,9 +34,20 @@ import {
   READY_FOR_TRACKING_DELAY_MS,
   STABLE_TIME_DELAY_MS,
   type ServiceTestContext,
-  type MockVideoElement,
   type StreamKeysVideoElement,
 } from './test-utils';
+
+/**
+ * Fake timers configuration for debounce testing.
+ * Must include 'Date' to properly test debounce logic that uses Date.now().
+ */
+const FAKE_TIMERS: (
+  | 'setTimeout'
+  | 'setInterval'
+  | 'requestAnimationFrame'
+  | 'cancelAnimationFrame'
+  | 'Date'
+)[] = ['setTimeout', 'setInterval', 'requestAnimationFrame', 'cancelAnimationFrame', 'Date'];
 
 // Mock Settings module - required for Handler.create() to work
 vi.mock('@/core/settings', () => ({
@@ -58,32 +70,25 @@ const services = [
 ] as const;
 
 /**
- * Helper to get position history from the handler's internal state.
- * The handler stores position history in its RestorePosition API state.
+ * Helper to count position saves from console.info spy.
+ * Positions are logged as: "[StreamKeys] Seek position saved: X:XX"
  */
-function getPositionHistory(ctx: ServiceTestContext): Array<{ time: number; label: string }> {
-  // Access through the video element's augmented properties
-  const video = ctx.video as StreamKeysVideoElement;
-  // The RestorePosition state is attached to the video element during init
-  // We need to access it through the handler's internal API
-  // For now, we'll check the video element for the tracking properties
-  // and access the state through the global test context
-
-  // Actually, we need to track the state ourselves since Handler.create
-  // doesn't expose the RestorePositionAPI directly
-  // Let's check what properties are available on the augmented video
-  return (video as unknown as { _streamKeysPositionHistory?: Array<{ time: number; label: string }> })
-    ._streamKeysPositionHistory || [];
+function countPositionSaves(consoleInfoSpy: ReturnType<typeof vi.spyOn>): number {
+  return consoleInfoSpy.mock.calls.filter(
+    (call: unknown[]) => typeof call[0] === 'string' && call[0].includes('Seek position saved')
+  ).length;
 }
 
 describe.each(services)('Position History Debouncing - $name (fixture: $fixture)', ({ setup }) => {
   let ctx: ServiceTestContext;
   let user: ReturnType<typeof userEvent.setup>;
+  let consoleInfoSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    vi.useFakeTimers({
-      toFake: ['setTimeout', 'setInterval', 'requestAnimationFrame', 'cancelAnimationFrame'],
-    });
+    // Spy on console.info to count position saves
+    consoleInfoSpy = vi.spyOn(console, 'info');
+
+    vi.useFakeTimers({ toFake: FAKE_TIMERS });
     user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     ctx = setup(); // Loads fixture from resources/dom/{fixture}.html
 
@@ -97,12 +102,16 @@ describe.each(services)('Position History Debouncing - $name (fixture: $fixture)
       video._streamKeysStableTime = video.currentTime;
       video._streamKeysLastKnownTime = video.currentTime;
     }
+
+    // Clear spy after setup (ignore load time capture)
+    consoleInfoSpy.mockClear();
   });
 
   afterEach(() => {
     ctx.handler.cleanup();
     vi.useRealTimers();
     resetFixture();
+    consoleInfoSpy.mockRestore();
   });
 
   describe('timeline clicks (NEVER debounced)', () => {
@@ -128,8 +137,8 @@ describe.each(services)('Position History Debouncing - $name (fixture: $fixture)
       clickTimeline(ctx.video, dest2);
 
       // Both positions should be in history (timeline clicks are never debounced)
-      // We verify by checking the video element's tracking state
       expect(video._streamKeysReadyForTracking).toBe(true);
+      expect(countPositionSaves(consoleInfoSpy)).toBe(2);
     });
 
     it('handles rapid timeline clicks in succession', () => {
@@ -151,8 +160,9 @@ describe.each(services)('Position History Debouncing - $name (fixture: $fixture)
         vi.advanceTimersByTime(500);
       }
 
-      // All clicks should have been processed (not debounced)
+      // All 5 clicks should have been saved (timeline clicks are never debounced)
       expect(video._streamKeysReadyForTracking).toBe(true);
+      expect(countPositionSaves(consoleInfoSpy)).toBe(5);
     });
   });
 
@@ -196,6 +206,7 @@ describe.each(services)('Position History Debouncing - $name (fixture: $fixture)
       // Position diff >> SEEK_MIN_DIFF_SECONDS, so positions ARE valid
       // But only 3s passed < SEEK_DEBOUNCE_MS, so they're DEBOUNCED
       expect(video._streamKeysReadyForTracking).toBe(true);
+      expect(countPositionSaves(consoleInfoSpy)).toBe(1); // Only first press saved
     });
 
     it('saves again after debounce window expires', async () => {
@@ -217,7 +228,9 @@ describe.each(services)('Position History Debouncing - $name (fixture: $fixture)
       // Second press after debounce expired - should save
       await pressArrowKey(user, 'right');
 
+      // Both positions should be saved (debounce window expired)
       expect(video._streamKeysReadyForTracking).toBe(true);
+      expect(countPositionSaves(consoleInfoSpy)).toBe(2);
     });
   });
 
@@ -249,8 +262,9 @@ describe.each(services)('Position History Debouncing - $name (fixture: $fixture)
         await clickSkipButton(user, 'forward', ctx);
       }
 
-      // Still only 1 save (debounced despite valid position diff)
+      // Only 1 save despite 21 clicks (debounced)
       expect(video._streamKeysReadyForTracking).toBe(true);
+      expect(countPositionSaves(consoleInfoSpy)).toBe(1);
     });
   });
 
@@ -264,6 +278,9 @@ describe.each(services)('Position History Debouncing - $name (fixture: $fixture)
       // Keyboard seek - saves startPos
       await pressArrowKey(user, 'right');
 
+      // Simulate video completing the seek (fires seeked event, resets isKeyboardOrButtonSeek flag)
+      simulateSeeked(ctx.video);
+
       // 1 second later (within keyboard debounce window)
       vi.advanceTimersByTime(1000);
       const newPos = startPos + SEEK_MIN_DIFF_SECONDS * 5;
@@ -273,7 +290,9 @@ describe.each(services)('Position History Debouncing - $name (fixture: $fixture)
       const dest = newPos + SEEK_MIN_DIFF_SECONDS * 5;
       clickTimeline(ctx.video, dest);
 
+      // 2 saves: keyboard + timeline (timeline not affected by keyboard debounce)
       expect(video._streamKeysReadyForTracking).toBe(true);
+      expect(countPositionSaves(consoleInfoSpy)).toBe(2);
     });
 
     it('timeline click does not reset keyboard debounce', async () => {
@@ -284,6 +303,9 @@ describe.each(services)('Position History Debouncing - $name (fixture: $fixture)
 
       // Keyboard seek - saves startPos and starts debounce window
       await pressArrowKey(user, 'right');
+
+      // Simulate video completing the seek (fires seeked event)
+      simulateSeeked(ctx.video);
 
       // 1 second later, timeline click
       // (manually set stable time since we're simulating time passing, not using advancePlayback)
@@ -306,7 +328,9 @@ describe.each(services)('Position History Debouncing - $name (fixture: $fixture)
       // This should still be debounced from the first keyboard press
       await pressArrowKey(user, 'right');
 
+      // 2 saves: first keyboard + timeline (second keyboard debounced)
       expect(video._streamKeysReadyForTracking).toBe(true);
+      expect(countPositionSaves(consoleInfoSpy)).toBe(2);
     });
   });
 });
@@ -318,11 +342,12 @@ describe.each(services)('Position History Debouncing - $name (fixture: $fixture)
 describe('HBO Max specific: seeked event flag reset', () => {
   let ctx: ServiceTestContext;
   let user: ReturnType<typeof userEvent.setup>;
+  let consoleInfoSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    vi.useFakeTimers({
-      toFake: ['setTimeout', 'setInterval', 'requestAnimationFrame', 'cancelAnimationFrame'],
-    });
+    consoleInfoSpy = vi.spyOn(console, 'info');
+
+    vi.useFakeTimers({ toFake: FAKE_TIMERS });
     user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     ctx = setupHBOMaxTest();
     vi.advanceTimersByTime(LOAD_TIME_CAPTURE_DELAY_MS + READY_FOR_TRACKING_DELAY_MS + 100);
@@ -330,12 +355,15 @@ describe('HBO Max specific: seeked event flag reset', () => {
     const video = ctx.video as StreamKeysVideoElement;
     video._streamKeysStableTime = video.currentTime;
     video._streamKeysLastKnownTime = video.currentTime;
+
+    consoleInfoSpy.mockClear();
   });
 
   afterEach(() => {
     ctx.handler.cleanup();
     vi.useRealTimers();
     resetFixture();
+    consoleInfoSpy.mockRestore();
   });
 
   it('flag resets via seeked event, enabling timeline clicks', async () => {
@@ -348,7 +376,7 @@ describe('HBO Max specific: seeked event flag reset', () => {
     await pressArrowKey(user, 'right');
 
     // Seeked event fires (like real video after seek completes)
-    ctx.video.dispatchEvent(new Event('seeked'));
+    simulateSeeked(ctx.video);
 
     // Wait for debounce to expire
     vi.advanceTimersByTime(SEEK_DEBOUNCE_MS + 1000);
@@ -360,7 +388,9 @@ describe('HBO Max specific: seeked event flag reset', () => {
     // Timeline click should save (flag was reset by seeked event)
     clickTimeline(ctx.video, newPos + SEEK_MIN_DIFF_SECONDS * 5);
 
+    // 2 saves: keyboard + timeline (after debounce expired)
     expect(video._streamKeysReadyForTracking).toBe(true);
+    expect(countPositionSaves(consoleInfoSpy)).toBe(2);
   });
 
   it('rapid key presses replace seeked listener correctly', async () => {
@@ -399,33 +429,38 @@ describe('HBO Max specific: seeked event flag reset', () => {
       ctx.video._setSeeking(false);
 
       // Video fires seeked event (but listener was replaced by next key press)
-      ctx.video.dispatchEvent(new Event('seeked'));
+      simulateSeeked(ctx.video);
     }
 
-    // Verify tracking is still functioning correctly
+    // Only 1 save despite 15 key presses (all debounced after first)
     expect(video._streamKeysReadyForTracking).toBe(true);
+    expect(countPositionSaves(consoleInfoSpy)).toBe(1);
   });
 });
 
 describe('Disney+ specific: stable time via setTimeout', () => {
   let ctx: ServiceTestContext;
+  let consoleInfoSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    vi.useFakeTimers({
-      toFake: ['setTimeout', 'setInterval', 'requestAnimationFrame', 'cancelAnimationFrame'],
-    });
+    consoleInfoSpy = vi.spyOn(console, 'info');
+
+    vi.useFakeTimers({ toFake: FAKE_TIMERS });
     ctx = setupDisneyPlusTest();
     vi.advanceTimersByTime(LOAD_TIME_CAPTURE_DELAY_MS + READY_FOR_TRACKING_DELAY_MS + 100);
 
     const video = ctx.video as StreamKeysVideoElement;
     video._streamKeysStableTime = 200; // Initial position from setup
     video._streamKeysLastKnownTime = 200;
+
+    consoleInfoSpy.mockClear();
   });
 
   afterEach(() => {
     ctx.handler.cleanup();
     vi.useRealTimers();
     resetFixture();
+    consoleInfoSpy.mockRestore();
   });
 
   it('progress bar time is used for playback tracking', () => {
@@ -463,7 +498,9 @@ describe('Disney+ specific: stable time via setTimeout', () => {
     const dest = startPos + SEEK_MIN_DIFF_SECONDS * 5;
     clickTimeline(ctx.video, dest);
 
+    // Position saved from stable time
     expect(video._streamKeysReadyForTracking).toBe(true);
+    expect(countPositionSaves(consoleInfoSpy)).toBe(1);
   });
 
   it('handles progress bar updates before seeking event (race condition)', () => {
@@ -490,10 +527,12 @@ describe('Disney+ specific: stable time via setTimeout', () => {
 
     // Verify stable time wasn't updated yet
     expect(video._streamKeysStableTime).toBe(startPos);
+    // Position should be saved from stable time (startPos)
+    expect(countPositionSaves(consoleInfoSpy)).toBe(1);
 
     // After seek completes and STABLE_TIME_DELAY_MS passes
     ctx.video._setSeeking(false);
-    ctx.video.dispatchEvent(new Event('seeked'));
+    simulateSeeked(ctx.video);
     vi.advanceTimersByTime(STABLE_TIME_DELAY_MS + 100);
 
     // Now stable time should be updated
