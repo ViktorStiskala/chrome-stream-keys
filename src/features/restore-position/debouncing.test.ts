@@ -171,9 +171,9 @@ describe.each(services)('Position History Debouncing - $name (fixture: $fixture)
       /**
        * This test proves we're testing DEBOUNCING, not SEEK_MIN_DIFF_SECONDS.
        *
-       * Scenario: User holds arrow key for 3 seconds
+       * Scenario: User holds arrow key within debounce window
        * - Position changes by SEEK_MIN_DIFF_SECONDS * 6 (valid for saving!)
-       * - But only 3s passed (< SEEK_DEBOUNCE_MS window)
+       * - But time < SEEK_DEBOUNCE_MS window
        * - Result: Still only 1 save (debounced!)
        */
       const startPos = SEEK_MIN_DIFF_SECONDS * 10;
@@ -184,13 +184,17 @@ describe.each(services)('Position History Debouncing - $name (fixture: $fixture)
       // First key press - should save position
       await pressArrowKey(user, 'right');
 
-      // Simulate holding key for 3 seconds (30 presses at 100ms intervals)
-      // Position advances by SEEK_MIN_DIFF_SECONDS * 6 total
-      const totalPositionChange = SEEK_MIN_DIFF_SECONDS * 6;
-      const positionIncrement = totalPositionChange / 30;
+      // Stay within debounce window (60% of SEEK_DEBOUNCE_MS)
+      const totalDuration = Math.floor(SEEK_DEBOUNCE_MS * 0.6);
+      const pressCount = 20;
+      const interval = Math.floor(totalDuration / pressCount);
 
-      for (let i = 0; i < 30; i++) {
-        vi.advanceTimersByTime(100);
+      // Position advances by SEEK_MIN_DIFF_SECONDS * 6 total (valid for saving)
+      const totalPositionChange = SEEK_MIN_DIFF_SECONDS * 6;
+      const positionIncrement = totalPositionChange / pressCount;
+
+      for (let i = 0; i < pressCount; i++) {
+        vi.advanceTimersByTime(interval);
 
         // Manually update position and stable time in loop
         // (not using advancePlayback to control timing precisely)
@@ -204,7 +208,7 @@ describe.each(services)('Position History Debouncing - $name (fixture: $fixture)
       }
 
       // Position diff >> SEEK_MIN_DIFF_SECONDS, so positions ARE valid
-      // But only 3s passed < SEEK_DEBOUNCE_MS, so they're DEBOUNCED
+      // But time < SEEK_DEBOUNCE_MS, so they're DEBOUNCED
       expect(video._streamKeysReadyForTracking).toBe(true);
       expect(countPositionSaves(consoleInfoSpy)).toBe(1); // Only first press saved
     });
@@ -232,6 +236,40 @@ describe.each(services)('Position History Debouncing - $name (fixture: $fixture)
       expect(video._streamKeysReadyForTracking).toBe(true);
       expect(countPositionSaves(consoleInfoSpy)).toBe(2);
     });
+
+    it('debounce timer resets with each key press - 1 minute of continuous pressing', async () => {
+      /**
+       * Critical behavior: debounce window resets with EACH key press.
+       * Even 1 minute of key presses = only 1 save if each press is
+       * within SEEK_DEBOUNCE_MS of the previous one.
+       */
+      const startPos = SEEK_MIN_DIFF_SECONDS * 10;
+      advancePlayback(ctx, startPos);
+
+      const video = ctx.video as StreamKeysVideoElement;
+      await pressArrowKey(user, 'right'); // First press - saves
+
+      // Press keys for 60 seconds with interval = SEEK_DEBOUNCE_MS / 3
+      // Each press resets the debounce timer, so all are debounced
+      const interval = Math.floor(SEEK_DEBOUNCE_MS / 3);
+      const totalDuration = 60_000; // 1 minute
+      const pressCount = Math.floor(totalDuration / interval);
+      let currentPos = startPos;
+
+      for (let i = 0; i < pressCount; i++) {
+        vi.advanceTimersByTime(interval);
+        currentPos += 1; // Small increment
+        ctx.video._simulatePlayback(currentPos);
+        ctx.setProgressBarTime?.(currentPos);
+        video._streamKeysStableTime = currentPos;
+        video._streamKeysLastKnownTime = currentPos;
+        await pressArrowKey(user, 'right');
+      }
+
+      // Only 1 save despite 60 seconds of pressing!
+      expect(video._streamKeysReadyForTracking).toBe(true);
+      expect(countPositionSaves(consoleInfoSpy)).toBe(1);
+    });
   });
 
   describe('UI skip button clicks (debounced)', () => {
@@ -244,12 +282,16 @@ describe.each(services)('Position History Debouncing - $name (fixture: $fixture)
       // First click - saves
       await clickSkipButton(user, 'forward', ctx);
 
-      // Rapid clicks for 2 seconds (within SEEK_DEBOUNCE_MS)
-      const totalPositionChange = SEEK_MIN_DIFF_SECONDS * 5;
-      const positionIncrement = totalPositionChange / 20;
+      // Stay within debounce window (60% of SEEK_DEBOUNCE_MS)
+      const totalDuration = Math.floor(SEEK_DEBOUNCE_MS * 0.6);
+      const clickCount = 20;
+      const interval = Math.floor(totalDuration / clickCount);
 
-      for (let i = 0; i < 20; i++) {
-        vi.advanceTimersByTime(100);
+      const totalPositionChange = SEEK_MIN_DIFF_SECONDS * 5;
+      const positionIncrement = totalPositionChange / clickCount;
+
+      for (let i = 0; i < clickCount; i++) {
+        vi.advanceTimersByTime(interval);
 
         // Manually update position and stable time in loop
         // (not using advancePlayback to control timing precisely)
@@ -262,7 +304,7 @@ describe.each(services)('Position History Debouncing - $name (fixture: $fixture)
         await clickSkipButton(user, 'forward', ctx);
       }
 
-      // Only 1 save despite 21 clicks (debounced)
+      // Only 1 save despite many clicks (debounced)
       expect(video._streamKeysReadyForTracking).toBe(true);
       expect(countPositionSaves(consoleInfoSpy)).toBe(1);
     });
@@ -307,9 +349,10 @@ describe.each(services)('Position History Debouncing - $name (fixture: $fixture)
       // Simulate video completing the seek (fires seeked event)
       simulateSeeked(ctx.video);
 
-      // 1 second later, timeline click
-      // (manually set stable time since we're simulating time passing, not using advancePlayback)
-      vi.advanceTimersByTime(1000);
+      // Timeline click shortly after keyboard press (stay within debounce window)
+      // Use 20% of SEEK_DEBOUNCE_MS to ensure we have room for subsequent actions
+      const timeToTimelineClick = Math.floor(SEEK_DEBOUNCE_MS * 0.2);
+      vi.advanceTimersByTime(timeToTimelineClick);
       const pos2 = startPos + SEEK_MIN_DIFF_SECONDS * 5;
       video._streamKeysStableTime = pos2;
       video._streamKeysLastKnownTime = pos2;
@@ -322,8 +365,10 @@ describe.each(services)('Position History Debouncing - $name (fixture: $fixture)
       video._streamKeysStableTime = pos3;
       video._streamKeysLastKnownTime = pos3;
 
-      // Another keyboard press 500ms after timeline (still within original debounce)
-      vi.advanceTimersByTime(500);
+      // Another keyboard press shortly after (still within original debounce)
+      // Use 10% of SEEK_DEBOUNCE_MS
+      const timeAfterTimeline = Math.floor(SEEK_DEBOUNCE_MS * 0.1);
+      vi.advanceTimersByTime(timeAfterTimeline);
 
       // This should still be debounced from the first keyboard press
       await pressArrowKey(user, 'right');
