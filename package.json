@@ -20,7 +20,8 @@
     "pretest": "npm run build",
     "test": "vitest run",
     "new-version": "vite build --mode development",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "cleanup-html": "node scripts/cleanup-html.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.16.0",
