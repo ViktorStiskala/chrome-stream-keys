@@ -43,7 +43,8 @@ function sendToServer(level: string, method: string, args: unknown[]): void {
     if (!connectionErrorLogged) {
       connectionErrorLogged = true;
 
-      console.warn(
+      // Use original console to avoid infinite loop when console is patched
+      getOriginalConsole().warn(
         '[StreamKeys] Debug server connection failed (CSP may be blocking):',
         err.message || err
       );

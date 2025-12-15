@@ -113,7 +113,7 @@ export default defineConfig(({ command, mode }) => {
           startUrl: ['https://play.hbomax.com/'],
           // Chromium-specific: Disable web security to allow debug log forwarding to localhost
           // Note: Requires fresh profile (chromiumProfile) to take effect
-          ...(browser !== 'firefox' && {
+          ...(browser === 'chrome' && {
             args: [
               '--disable-web-security',
               '--disable-site-isolation-trials',
