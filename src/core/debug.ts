@@ -14,6 +14,8 @@ let originalConsole: {
   error: typeof console.error;
 } | null = null;
 
+let consoleForwardInitialized = false;
+
 function getOriginalConsole() {
   if (!originalConsole) {
     /* eslint-disable no-console */
@@ -103,35 +105,40 @@ function getBrowserInfo(): string {
 }
 
 function initConsoleForward(): void {
+  if (consoleForwardInitialized) return;
+  consoleForwardInitialized = true;
+
   /* eslint-disable no-console */
   const browser = getBrowserInfo();
-  console.log(`[StreamKeys] Debug session started - ${browser} - ${new Date().toISOString()}`);
+  const message = `[StreamKeys] Debug session started - ${browser} - ${new Date().toISOString()}`;
 
-  const orig = {
-    log: console.log,
-    info: console.info,
-    warn: console.warn,
-    error: console.error,
-  };
+  // IMPORTANT: Capture original console methods BEFORE patching console.*.
+  // Debug.log/action/event call getOriginalConsole() later; if we patch first, we'd capture patched
+  // methods and end up forwarding twice (patched console + Debug.* sendToServer).
+  const orig = getOriginalConsole();
+
+  // Log startup message both to the real console and the debug server
+  orig.log(message);
+  sendToServer('LOG', 'console.log', [message]);
 
   console.log = (...args: unknown[]) => {
     sendToServer('LOG', 'console.log', args);
-    orig.log.apply(console, args);
+    orig.log(...args);
   };
 
   console.info = (...args: unknown[]) => {
     sendToServer('INFO', 'console.info', args);
-    orig.info.apply(console, args);
+    orig.info(...args);
   };
 
   console.warn = (...args: unknown[]) => {
     sendToServer('WARN', 'console.warn', args);
-    orig.warn.apply(console, args);
+    orig.warn(...args);
   };
 
   console.error = (...args: unknown[]) => {
     sendToServer('ERROR', 'console.error', args);
-    orig.error.apply(console, args);
+    orig.error(...args);
   };
   /* eslint-enable no-console */
 }

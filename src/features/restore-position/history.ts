@@ -179,6 +179,9 @@ function setupVideoTracking(
   video._streamKeysPlaybackStarted = false;
   video._streamKeysReadyForTracking = false;
 
+  let loadTimeCaptureTimeout: number | null = null;
+  let readyForTrackingTimeout: number | null = null;
+
   /**
    * Get the actual playback time using the video's augmented method.
    */
@@ -215,8 +218,9 @@ function setupVideoTracking(
 
   // Capture load time position
   const captureLoadTimeOnce = () => {
-    if (state.loadTimePosition === null) {
-      setTimeout(() => {
+    if (state.loadTimePosition === null && loadTimeCaptureTimeout === null) {
+      loadTimeCaptureTimeout = window.setTimeout(() => {
+        loadTimeCaptureTimeout = null;
         const actualTime = getActualPlaybackTime(video);
 
         if (state.loadTimePosition === null && actualTime >= SEEK_MIN_DIFF_SECONDS) {
@@ -226,12 +230,15 @@ function setupVideoTracking(
           );
         }
 
-        setTimeout(() => {
-          if (!video._streamKeysReadyForTracking) {
-            video._streamKeysReadyForTracking = true;
-            console.info('[StreamKeys] Ready to track seeks');
-          }
-        }, READY_FOR_TRACKING_DELAY_MS);
+        if (readyForTrackingTimeout === null) {
+          readyForTrackingTimeout = window.setTimeout(() => {
+            readyForTrackingTimeout = null;
+            if (!video._streamKeysReadyForTracking) {
+              video._streamKeysReadyForTracking = true;
+              console.info('[StreamKeys] Ready to track seeks');
+            }
+          }, READY_FOR_TRACKING_DELAY_MS);
+        }
       }, LOAD_TIME_CAPTURE_DELAY_MS);
     }
   };
@@ -319,6 +326,17 @@ function setupVideoTracking(
     video.removeEventListener('seeking', handleSeeking);
     video.removeEventListener('seeked', handleSeeked);
     video.removeEventListener('timeupdate', handleTimeUpdate);
+    video.removeEventListener('canplay', captureLoadTimeOnce);
+    video.removeEventListener('playing', captureLoadTimeOnce);
+    video._streamKeysSeekListenerAdded = false;
+    if (loadTimeCaptureTimeout !== null) {
+      clearTimeout(loadTimeCaptureTimeout);
+      loadTimeCaptureTimeout = null;
+    }
+    if (readyForTrackingTimeout !== null) {
+      clearTimeout(readyForTrackingTimeout);
+      readyForTrackingTimeout = null;
+    }
     if (trackingFrame !== null) {
       cancelAnimationFrame(trackingFrame);
     }
