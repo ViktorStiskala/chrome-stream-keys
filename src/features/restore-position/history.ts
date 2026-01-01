@@ -195,6 +195,9 @@ function setupVideoTracking(
   video._streamKeysPlaybackStarted = false;
   video._streamKeysReadyForTracking = false;
 
+  // Track when setup started (for load time capture window)
+  const setupStartTime = Date.now();
+
   let loadTimeCaptureTimeout: number | null = null;
   let readyForTrackingTimeout: number | null = null;
 
@@ -234,6 +237,14 @@ function setupVideoTracking(
 
   // Capture load time position
   const captureLoadTimeOnce = () => {
+    // Only allow load time capture within the initial load window.
+    // After loadTimeCaptureDelay has passed since setup, we're past the load phase.
+    // This prevents canplay/playing events after seeks from triggering a new capture,
+    // while still allowing services with auto-resume (e.g., HBO Max) to capture the
+    // resumed position within their configured delay window.
+    const elapsedSinceSetup = Date.now() - setupStartTime;
+    if (elapsedSinceSetup > loadTimeCaptureDelay) return;
+
     if (state.loadTimePosition === null && loadTimeCaptureTimeout === null) {
       loadTimeCaptureTimeout = window.setTimeout(() => {
         loadTimeCaptureTimeout = null;
