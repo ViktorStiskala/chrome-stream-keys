@@ -19,6 +19,24 @@ When the prompt mentions a specific streaming provider, **always load the corres
 
 These rules contain critical DOM selectors, Shadow DOM access patterns, and service-specific quirks that must be followed.
 
+## Cursor Rules Maintenance
+
+Cursor rules must stay in sync with the implementation. This applies:
+
+1. **When adding new features**: Document new options in the relevant rule file with default values and usage examples
+2. **When modifying existing code**: If you read a source file and notice the relevant Cursor rule contains outdated or incorrect information, update the rule to match the current implementation
+3. **When refactoring**: Update rules to reflect new patterns, renamed functions, or changed behavior
+
+The agent should proactively check and update rules whenever it reads source files that have associated rules.
+
+**Important:** All rule updates must follow the "Cursor Rules Management" policy below - additions are allowed, but removals or significant modifications require user confirmation.
+
+## Cursor Rules Management
+
+- **Never remove or significantly modify existing rules** without explicit user confirmation
+- When rules appear outdated, ASK the user before making changes - the agent may lack full context
+- Only add new rules or make minor clarifications without asking
+
 ## Code Quality Requirements
 
 **After changes to source code in `src/`, run linters and tests before completing the task.**

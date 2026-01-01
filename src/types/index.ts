@@ -19,6 +19,58 @@ export interface PositionEntry {
   savedAt: number;
 }
 
+// Service identifiers
+export type ServiceId = 'disney' | 'hbomax' | 'youtube' | 'bbc';
+
+// Service handler configuration
+export interface ServiceHandler {
+  id: ServiceId;
+  urlPattern: string;
+  handlerFile: string;
+  displayName: string;
+}
+
+// Default settings values
+export const DEFAULT_LANGUAGES = ['English', 'English [CC]', 'English CC'];
+export const DEFAULT_POSITION_HISTORY = true;
+export const DEFAULT_CAPTURE_MEDIA_KEYS = true;
+export const DEFAULT_CUSTOM_SEEK_ENABLED = false;
+export const DEFAULT_SEEK_TIME = 10;
+export const DEFAULT_ENABLED_SERVICES: Record<ServiceId, boolean> = {
+  disney: true,
+  hbomax: true,
+  youtube: true,
+  bbc: true,
+};
+
+// Registered service handlers
+export const SERVICE_HANDLERS: ServiceHandler[] = [
+  {
+    id: 'disney',
+    urlPattern: 'disneyplus.com',
+    handlerFile: 'src/services/disney.js',
+    displayName: 'Disney+',
+  },
+  {
+    id: 'hbomax',
+    urlPattern: 'hbomax.com',
+    handlerFile: 'src/services/hbomax.js',
+    displayName: 'HBO Max',
+  },
+  {
+    id: 'youtube',
+    urlPattern: 'youtube.com',
+    handlerFile: 'src/services/youtube.js',
+    displayName: 'YouTube',
+  },
+  {
+    id: 'bbc',
+    urlPattern: 'bbc.co.uk/iplayer',
+    handlerFile: 'src/services/bbc.js',
+    displayName: 'BBC iPlayer',
+  },
+];
+
 // Settings types
 export interface StreamKeysSettings {
   subtitleLanguages: string[];
@@ -26,6 +78,7 @@ export interface StreamKeysSettings {
   captureMediaKeys: boolean;
   customSeekEnabled: boolean;
   seekTime: number;
+  enabledServices: Record<ServiceId, boolean>;
 }
 
 // Feature flags
@@ -36,10 +89,11 @@ export interface FeatureFlags {
   fullscreenOverlay?: boolean;
 }
 
-// Global window augmentation for settings
+// Global window augmentation for settings and shadow patcher
 declare global {
   interface Window {
     __streamKeysSettings?: StreamKeysSettings;
+    __getShadowRoot?: (element: Element) => ShadowRoot | undefined;
   }
 }
 

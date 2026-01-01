@@ -89,6 +89,7 @@ function createHandler(config: HandlerConfig): HandlerAPI {
     restorePositionAPI = RestorePosition.init({
       getVideoElement,
       seekToTime: config.seekToTime,
+      timing: config.positionTrackingTiming,
     });
     cleanupFns.push(restorePositionAPI.cleanup);
   }
@@ -104,6 +105,7 @@ function createHandler(config: HandlerConfig): HandlerAPI {
   let keyboardHandler: ((e: KeyboardEvent) => void) | undefined;
 
   if (features.keyboard) {
+    // Full keyboard handling (arrow keys, space, etc.)
     const keyboardAPI = Keyboard.init({
       getVideoElement,
       getButton: config.getButton,
@@ -113,6 +115,14 @@ function createHandler(config: HandlerConfig): HandlerAPI {
     });
     keyboardHandler = keyboardAPI.handleKey;
     cleanupFns.push(keyboardAPI.cleanup);
+  } else if (features.restorePosition && restorePositionAPI) {
+    // Lightweight keyboard handler for restore dialog only (R key + dialog keys)
+    // Used when keyboard feature is disabled but restorePosition is enabled
+    const dialogKeyboardAPI = Keyboard.initDialogOnly({
+      restorePosition: restorePositionAPI,
+    });
+    keyboardHandler = dialogKeyboardAPI.handleKey;
+    cleanupFns.push(dialogKeyboardAPI.cleanup);
   }
 
   // Create focus config
@@ -200,8 +210,9 @@ function createHandler(config: HandlerConfig): HandlerAPI {
     }, POSITION_TRACK_TIMEOUT_MS);
   };
 
-  // Media Session handlers (when capture enabled)
-  if (Settings.isMediaKeysCaptureEnabled() && navigator.mediaSession) {
+  // Media Session handlers (when capture enabled AND keyboard feature enabled)
+  // Skip for handlers that disable keyboard (like YouTube) to avoid conflicting with native controls
+  if (features.keyboard && Settings.isMediaKeysCaptureEnabled() && navigator.mediaSession) {
     console.info(`[StreamKeys] Media keys captured for ${config.name} player`);
 
     const setupMediaSession = (logEnabled: boolean) => {

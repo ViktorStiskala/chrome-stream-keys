@@ -19,6 +19,17 @@ export const LOAD_TIME_CAPTURE_DELAY_MS = 1000;
 // Delay after load time capture before tracking seeks (avoids capturing initial seeks)
 export const READY_FOR_TRACKING_DELAY_MS = 500;
 
+/**
+ * Configuration for position tracking timing delays.
+ * Services can customize these to match their auto-resume behavior.
+ */
+export interface TrackingTimingConfig {
+  /** Delay before capturing load time position (default: 1000ms) */
+  loadTimeCaptureDelay?: number;
+  /** Delay after load time capture before tracking seeks (default: 500ms) */
+  readyForTrackingDelay?: number;
+}
+
 // State
 export interface PositionHistoryState {
   positionHistory: PositionEntry[];
@@ -170,14 +181,22 @@ function getRestorePositions(state: PositionHistoryState): RestorePosition[] {
 function setupVideoTracking(
   video: StreamKeysVideoElement,
   state: PositionHistoryState,
-  getVideoElement: () => StreamKeysVideoElement | null
+  getVideoElement: () => StreamKeysVideoElement | null,
+  timing?: TrackingTimingConfig
 ): () => void {
   if (video._streamKeysSeekListenerAdded) {
     return () => {};
   }
 
+  // Use custom timing values or fall back to defaults
+  const loadTimeCaptureDelay = timing?.loadTimeCaptureDelay ?? LOAD_TIME_CAPTURE_DELAY_MS;
+  const readyForTrackingDelay = timing?.readyForTrackingDelay ?? READY_FOR_TRACKING_DELAY_MS;
+
   video._streamKeysPlaybackStarted = false;
   video._streamKeysReadyForTracking = false;
+
+  // Track when setup started (for load time capture window)
+  const setupStartTime = Date.now();
 
   let loadTimeCaptureTimeout: number | null = null;
   let readyForTrackingTimeout: number | null = null;
@@ -218,6 +237,14 @@ function setupVideoTracking(
 
   // Capture load time position
   const captureLoadTimeOnce = () => {
+    // Only allow load time capture within the initial load window.
+    // After loadTimeCaptureDelay has passed since setup, we're past the load phase.
+    // This prevents canplay/playing events after seeks from triggering a new capture,
+    // while still allowing services with auto-resume (e.g., HBO Max) to capture the
+    // resumed position within their configured delay window.
+    const elapsedSinceSetup = Date.now() - setupStartTime;
+    if (elapsedSinceSetup > loadTimeCaptureDelay) return;
+
     if (state.loadTimePosition === null && loadTimeCaptureTimeout === null) {
       loadTimeCaptureTimeout = window.setTimeout(() => {
         loadTimeCaptureTimeout = null;
@@ -237,9 +264,9 @@ function setupVideoTracking(
               video._streamKeysReadyForTracking = true;
               console.info('[StreamKeys] Ready to track seeks');
             }
-          }, READY_FOR_TRACKING_DELAY_MS);
+          }, readyForTrackingDelay);
         }
-      }, LOAD_TIME_CAPTURE_DELAY_MS);
+      }, loadTimeCaptureDelay);
     }
   };
 

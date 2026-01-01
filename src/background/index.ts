@@ -1,7 +1,16 @@
 // Service worker router - injects appropriate handler based on URL
 
 import browser, { WebNavigation } from 'webextension-polyfill';
-import type { StreamKeysSettings } from '@/types';
+import type { ServiceId, ServiceHandler, StreamKeysSettings } from '@/types';
+import {
+  DEFAULT_LANGUAGES,
+  DEFAULT_POSITION_HISTORY,
+  DEFAULT_CAPTURE_MEDIA_KEYS,
+  DEFAULT_CUSTOM_SEEK_ENABLED,
+  DEFAULT_SEEK_TIME,
+  DEFAULT_ENABLED_SERVICES,
+  SERVICE_HANDLERS,
+} from '@/types';
 import { Debug } from '@/core/debug';
 
 // __DEV__ is defined by vite config based on isWatch
@@ -17,11 +26,7 @@ const POSITION_HISTORY_KEY = 'positionHistoryEnabled';
 const CAPTURE_MEDIA_KEYS_KEY = 'captureMediaKeys';
 const CUSTOM_SEEK_ENABLED_KEY = 'customSeekEnabled';
 const SEEK_TIME_KEY = 'seekTime';
-const DEFAULT_LANGUAGES = ['English', 'English [CC]', 'English CC'];
-const DEFAULT_POSITION_HISTORY = true;
-const DEFAULT_CAPTURE_MEDIA_KEYS = true;
-const DEFAULT_CUSTOM_SEEK_ENABLED = false;
-const DEFAULT_SEEK_TIME = 10;
+const ENABLED_SERVICES_KEY = 'enabledServices';
 
 // Use storage.local as fallback if storage.sync fails (Firefox temporary add-ons)
 async function getStorage(): Promise<typeof browser.storage.sync> {
@@ -37,23 +42,19 @@ async function getStorage(): Promise<typeof browser.storage.sync> {
 const injectedTabs = new Map<number, string>();
 
 /**
- * Handler configuration for each supported service
- */
-interface ServiceHandler {
-  urlPattern: string;
-  handlerFile: string;
-}
-
-const handlers: ServiceHandler[] = [
-  { urlPattern: 'disneyplus.com', handlerFile: 'src/services/disney.js' },
-  { urlPattern: 'hbomax.com', handlerFile: 'src/services/hbomax.js' },
-];
-
-/**
  * Find the handler for a given URL
  */
 function findHandler(url: string): ServiceHandler | undefined {
-  return handlers.find((h) => url.includes(h.urlPattern));
+  return SERVICE_HANDLERS.find((h) => url.includes(h.urlPattern));
+}
+
+/**
+ * Get enabled services from storage
+ */
+async function getEnabledServices(): Promise<Record<ServiceId, boolean>> {
+  const store = await getStorage();
+  const result = await store.get(ENABLED_SERVICES_KEY);
+  return (result[ENABLED_SERVICES_KEY] as Record<ServiceId, boolean>) || DEFAULT_ENABLED_SERVICES;
 }
 
 /**
@@ -68,6 +69,7 @@ async function injectHandler(tabId: number, handlerFile: string): Promise<void> 
     CAPTURE_MEDIA_KEYS_KEY,
     CUSTOM_SEEK_ENABLED_KEY,
     SEEK_TIME_KEY,
+    ENABLED_SERVICES_KEY,
   ]);
   const settings: StreamKeysSettings = {
     subtitleLanguages: (result[STORAGE_KEY] as string[] | undefined) || DEFAULT_LANGUAGES,
@@ -85,6 +87,8 @@ async function injectHandler(tabId: number, handlerFile: string): Promise<void> 
         : DEFAULT_CUSTOM_SEEK_ENABLED,
     seekTime:
       result[SEEK_TIME_KEY] !== undefined ? (result[SEEK_TIME_KEY] as number) : DEFAULT_SEEK_TIME,
+    enabledServices:
+      (result[ENABLED_SERVICES_KEY] as Record<ServiceId, boolean>) || DEFAULT_ENABLED_SERVICES,
   };
 
   // Inject settings as global variable (main frame only)
@@ -106,48 +110,66 @@ async function injectHandler(tabId: number, handlerFile: string): Promise<void> 
 }
 
 /**
- * Handle navigation completion
+ * Try to inject handler for a URL if service is enabled and not already injected
  */
-function handleNavigationComplete(details: WebNavigation.OnCompletedDetailsType): void {
+async function tryInjectHandler(
+  tabId: number,
+  url: string,
+  eventName: string,
+  details: object
+): Promise<void> {
   // Skip chrome:// URLs
-  if (details.url.includes('chrome://')) {
+  if (url.includes('chrome://')) {
     return;
   }
 
-  // Only handle main frame
-  if (details.frameId !== 0) {
-    return;
-  }
-
-  const handler = findHandler(details.url);
+  const handler = findHandler(url);
   if (!handler) {
     if (__DEV__) {
-      Debug.event('WebNavigation.onCompleted', details, 'no handler found, skipping');
+      Debug.event(eventName, details, 'no handler found, skipping');
     }
     return;
   }
 
-  // Check if already injected for this tab (prevents double injection on SPA navigation)
-  const previousHandler = injectedTabs.get(details.tabId);
-  if (previousHandler === handler.handlerFile) {
+  // Check if service is enabled
+  const enabledServices = await getEnabledServices();
+  if (!enabledServices[handler.id]) {
     if (__DEV__) {
-      Debug.event('WebNavigation.onCompleted', details, 'already injected, skipping');
+      Debug.event(eventName, details, `service ${handler.id} disabled, skipping`);
+    }
+    return;
+  }
+
+  // Check if already injected for this tab
+  if (injectedTabs.get(tabId) === handler.handlerFile) {
+    if (__DEV__) {
+      Debug.event(eventName, details, 'already injected, skipping');
     }
     return;
   }
 
   if (__DEV__) {
-    Debug.event('WebNavigation.onCompleted', details, `injecting handler=${handler.handlerFile}`);
+    Debug.event(eventName, details, `injecting handler=${handler.handlerFile}`);
   }
 
-  injectedTabs.set(details.tabId, handler.handlerFile);
-  injectHandler(details.tabId, handler.handlerFile).catch((err) => {
+  injectedTabs.set(tabId, handler.handlerFile);
+  try {
+    await injectHandler(tabId, handler.handlerFile);
+  } catch (err) {
     if (__DEV__) {
-      Debug.event('WebNavigation.onCompleted', details, `injection failed: ${err}`);
+      Debug.event(eventName, details, `injection failed: ${err}`);
     }
     // Injection failed, allow retry
-    injectedTabs.delete(details.tabId);
-  });
+    injectedTabs.delete(tabId);
+  }
+}
+
+/**
+ * Handle navigation completion
+ */
+function handleNavigationComplete(details: WebNavigation.OnCompletedDetailsType): void {
+  if (details.frameId !== 0) return;
+  tryInjectHandler(details.tabId, details.url, 'WebNavigation.onCompleted', details);
 }
 
 /**
@@ -182,19 +204,34 @@ function handleBeforeNavigate(details: WebNavigation.OnBeforeNavigateDetailsType
   }
 }
 
+/**
+ * Handle SPA navigation (History API pushState/replaceState)
+ * Used for sites like YouTube that navigate without full page reloads
+ */
+function handleHistoryStateUpdated(details: WebNavigation.OnHistoryStateUpdatedDetailsType): void {
+  if (details.frameId !== 0) return;
+  tryInjectHandler(details.tabId, details.url, 'WebNavigation.onHistoryStateUpdated', details);
+}
+
 // Internal API (for testing/debugging)
 export const Background = {
+  handlers: SERVICE_HANDLERS,
   findHandler,
   injectHandler,
+  tryInjectHandler,
   handleNavigationComplete,
   handleTabRemoved,
   handleBeforeNavigate,
+  handleHistoryStateUpdated,
+  getEnabledServices,
+  DEFAULT_ENABLED_SERVICES,
 };
 
 // Set up event listeners
 browser.webNavigation.onCompleted.addListener(handleNavigationComplete);
 browser.tabs.onRemoved.addListener(handleTabRemoved);
 browser.webNavigation.onBeforeNavigate.addListener(handleBeforeNavigate);
+browser.webNavigation.onHistoryStateUpdated.addListener(handleHistoryStateUpdated);
 
 // Open settings when clicking the extension icon
 browser.action.onClicked.addListener(() => {
@@ -210,13 +247,15 @@ async function injectIntoExistingTabs(): Promise<void> {
     Debug.log('[startup] Checking existing tabs for injection');
   }
 
+  const enabledServices = await getEnabledServices();
   const tabs = await browser.tabs.query({});
+
   for (const tab of tabs) {
     const tabId = tab.id;
     if (!tabId || !tab.url) continue;
 
     const handler = findHandler(tab.url);
-    if (handler && !injectedTabs.has(tabId)) {
+    if (handler && !injectedTabs.has(tabId) && enabledServices[handler.id]) {
       if (__DEV__) {
         Debug.log(`[startup] tab=${tabId} injecting handler=${handler.handlerFile} url=${tab.url}`);
       }

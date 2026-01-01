@@ -15,9 +15,82 @@ declare const __DEV__: boolean;
 const KEYBOARD_SEEK_FLAG_TIMEOUT_MS = 2000;
 
 /**
+ * Check if a key event should be ignored (modifier keys or user typing in input)
+ */
+function shouldIgnoreKeyEvent(e: KeyboardEvent): boolean {
+  // Don't intercept events with modifier keys
+  if (e.metaKey || e.ctrlKey || e.altKey) {
+    return true;
+  }
+
+  // Skip if user is typing in an input/textarea
+  const activeEl = document.activeElement;
+  if (
+    activeEl &&
+    (activeEl.tagName === 'INPUT' ||
+      activeEl.tagName === 'TEXTAREA' ||
+      (activeEl as HTMLElement).isContentEditable)
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * Timeout for resetting keyboard seek flag when no video element is available (ms).
  */
 const KEYBOARD_SEEK_FLAG_NO_VIDEO_TIMEOUT_MS = 500;
+
+export interface DialogOnlyConfig {
+  /** RestorePosition API for dialog key handling */
+  restorePosition: RestorePositionAPI;
+}
+
+export interface DialogOnlyAPI {
+  /** Handle a key event */
+  handleKey: (e: KeyboardEvent) => void;
+  /** Cleanup resources */
+  cleanup: CleanupFn;
+}
+
+/**
+ * Initialize lightweight keyboard handler for restore dialog only (R key + dialog keys)
+ * Used when keyboard feature is disabled but restorePosition is enabled
+ */
+function initDialogOnly(config: DialogOnlyConfig): DialogOnlyAPI {
+  const { restorePosition } = config;
+
+  const handleDialogKeys = (e: KeyboardEvent) => {
+    // Handle dialog keys first (ESC, number keys when dialog is open)
+    if (restorePosition.handleDialogKeys(e)) {
+      return;
+    }
+
+    // Check for modifier keys or user typing in input
+    if (shouldIgnoreKeyEvent(e)) {
+      return;
+    }
+
+    // Handle R key to open restore dialog
+    if (e.code === 'KeyR' && Settings.isPositionHistoryEnabled()) {
+      if (__DEV__) Debug.action('Key: R', 'open restore dialog');
+      e.preventDefault();
+      e.stopPropagation();
+      restorePosition.openDialog();
+    }
+  };
+
+  // Use capture phase to intercept before any other handlers
+  window.addEventListener('keydown', handleDialogKeys, true);
+
+  return {
+    handleKey: handleDialogKeys,
+    cleanup: () => {
+      window.removeEventListener('keydown', handleDialogKeys, true);
+    },
+  };
+}
 
 export interface KeyboardConfig {
   /** Get the augmented video element (with _streamKeysGetPlaybackTime method) */
@@ -132,19 +205,8 @@ function initKeyboard(config: KeyboardConfig): KeyboardAPI {
       return;
     }
 
-    // Don't intercept events with modifier keys
-    if (e.metaKey || e.ctrlKey || e.altKey) {
-      return;
-    }
-
-    // Skip if user is typing in an input/textarea
-    const activeEl = document.activeElement;
-    if (
-      activeEl &&
-      (activeEl.tagName === 'INPUT' ||
-        activeEl.tagName === 'TEXTAREA' ||
-        (activeEl as HTMLElement).isContentEditable)
-    ) {
+    // Check for modifier keys or user typing in input
+    if (shouldIgnoreKeyEvent(e)) {
       return;
     }
 
@@ -216,4 +278,5 @@ function initKeyboard(config: KeyboardConfig): KeyboardAPI {
 // Public API
 export const Keyboard = {
   init: initKeyboard,
+  initDialogOnly: initDialogOnly,
 };

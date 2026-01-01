@@ -2,7 +2,7 @@
 
 import type { CleanupFn, StreamKeysVideoElement } from '@/types';
 import { Settings } from '@/core/settings';
-import { PositionHistory, type PositionHistoryState } from './history';
+import { PositionHistory, type PositionHistoryState, type TrackingTimingConfig } from './history';
 import { RestoreDialog } from './dialog';
 
 export interface RestorePositionConfig {
@@ -13,6 +13,8 @@ export interface RestorePositionConfig {
    * If provided, used instead of direct video.currentTime assignment.
    */
   seekToTime?: (time: number, duration: number) => boolean;
+  /** Optional timing configuration for position tracking settling delays */
+  timing?: TrackingTimingConfig;
 }
 
 export interface RestorePositionAPI {
@@ -42,7 +44,7 @@ function initRestorePosition(config: RestorePositionConfig): RestorePositionAPI 
   let videoCleanup: CleanupFn | null = null;
   let earlySetupInterval: ReturnType<typeof setInterval> | null = null;
 
-  const { getVideoElement, seekToTime } = config;
+  const { getVideoElement, seekToTime, timing } = config;
 
   // Track current video to detect when a new video starts
   // We track both the element AND the source because:
@@ -84,7 +86,7 @@ function initRestorePosition(config: RestorePositionConfig): RestorePositionAPI 
 
     // Set up tracking if not already done
     if (!video._streamKeysSeekListenerAdded) {
-      videoCleanup = PositionHistory.setupTracking(video, state, getVideoElement);
+      videoCleanup = PositionHistory.setupTracking(video, state, getVideoElement, timing);
     }
   };
 
@@ -151,4 +153,4 @@ export const RestorePosition = {
 };
 
 // Re-export types
-export type { PositionHistoryState } from './history';
+export type { PositionHistoryState, TrackingTimingConfig } from './history';
