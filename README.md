@@ -27,6 +27,16 @@ Stream Keys adds a reliable layer of keyboard handling on top of the player, so 
   - Fixes unreliable `Space` behavior and adds `C` for subtitles and `F` for fullscreen.
   - The HBO Max player already supports Left/Right arrow keys for skipping.
 
+- **YouTube**
+  - Position restore feature (`R` key) to jump back to previous positions.
+  - Other YouTube keyboard shortcuts work natively.
+
+- **BBC iPlayer**
+  - Fixes broken `Space` play/pause behavior, adds `C` for subtitles and `F` for fullscreen.
+  - Left/Right arrow keys for quick rewind/fast-forward.
+
+Individual services can be enabled or disabled in the extension settings.
+
 ## Features
 
 > YouTube-style keyboard shortcuts for streaming services.

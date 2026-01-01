@@ -489,4 +489,184 @@ describe('Restore Position Timing', () => {
       // setting video.currentTime doesn't seek to the expected position
     });
   });
+
+  /**
+   * Load time capture window tests.
+   *
+   * These tests verify that:
+   * 1. Service auto-resume (e.g., HBO Max resuming to saved position) captures correctly
+   * 2. User timeline clicks AFTER the capture window don't affect load time
+   * 3. Videos starting from beginning (position < 15s) don't capture useless load time
+   * 4. Auto-resume seeks are NOT recorded in position history
+   *
+   * The capture window is controlled by loadTimeCaptureDelay (default 1000ms).
+   * After this window closes, no new load time captures are allowed.
+   */
+  describe('Load time capture window', () => {
+    /**
+     * Test: Service auto-resume captures the correct load time
+     *
+     * When HBO Max, Disney+, etc. auto-resume to where the user left off,
+     * the resumed position should be captured as load time (not position 0).
+     */
+    it('captures load time when service auto-resumes within window', async () => {
+      ctx.restorePositionAPI = RestorePosition.init({ getVideoElement: ctx.getVideoElement });
+      const state = ctx.restorePositionAPI.getState();
+
+      // Simulate service auto-resume: canplay fires, then service seeks to saved position
+      ctx.video._setCurrentTime(0);
+      ctx.video.dispatchEvent(new Event('canplay'));
+
+      // Service auto-seeks to saved position (within capture window)
+      const resumePosition = SEEK_MIN_DIFF_SECONDS + 500;
+      vi.advanceTimersByTime(200); // Service resumes quickly
+      ctx.video._setCurrentTime(resumePosition);
+      ctx.video.dispatchEvent(new Event('seeked'));
+
+      // Wait for capture timeout to fire
+      vi.advanceTimersByTime(LOAD_TIME_CAPTURE_DELAY_MS);
+
+      // Load time should be the resumed position
+      expect(state.loadTimePosition).toBe(resumePosition);
+    });
+
+    /**
+     * Test: Timeline clicks after capture window don't affect load time
+     *
+     * Once the capture window has closed (loadTimeCaptureDelay elapsed),
+     * user seeks should NOT be recorded as load time.
+     */
+    it('does NOT capture timeline clicks as load time after capture window', async () => {
+      ctx.restorePositionAPI = RestorePosition.init({ getVideoElement: ctx.getVideoElement });
+      const state = ctx.restorePositionAPI.getState();
+
+      // Video starts from beginning (no auto-resume)
+      ctx.video._setCurrentTime(5); // Below SEEK_MIN_DIFF_SECONDS
+      ctx.video.dispatchEvent(new Event('canplay'));
+
+      // Wait for capture window to close and tracking to be ready
+      vi.advanceTimersByTime(LOAD_TIME_CAPTURE_DELAY_MS + READY_FOR_TRACKING_DELAY_MS + 100);
+
+      // Load time should be null (started from beginning, below threshold)
+      expect(state.loadTimePosition).toBeNull();
+
+      // User clicks timeline after the window
+      ctx.video._setCurrentTime(300);
+      ctx.video.dispatchEvent(new Event('seeked'));
+
+      // Load time should still be null (click was after window)
+      expect(state.loadTimePosition).toBeNull();
+    });
+
+    /**
+     * Test: Video starting from beginning doesn't capture useless load time
+     *
+     * If a video starts at position 0 (or any position < SEEK_MIN_DIFF_SECONDS),
+     * the load time should NOT be captured since "0:00" is not useful as a restore point.
+     */
+    it('does NOT capture load time when video starts from beginning', async () => {
+      ctx.restorePositionAPI = RestorePosition.init({ getVideoElement: ctx.getVideoElement });
+      const state = ctx.restorePositionAPI.getState();
+
+      // Video starts at position 0 (watching from beginning)
+      ctx.video._setCurrentTime(0);
+      ctx.video.dispatchEvent(new Event('canplay'));
+
+      // Wait for capture timeout
+      vi.advanceTimersByTime(LOAD_TIME_CAPTURE_DELAY_MS + 100);
+
+      // Load time should NOT be captured (0 < SEEK_MIN_DIFF_SECONDS)
+      expect(state.loadTimePosition).toBeNull();
+    });
+
+    /**
+     * Test: Auto-resume seek is NOT recorded in position history
+     *
+     * When a service auto-resumes, the initial seek from 0 to the saved position
+     * should NOT be recorded in position history. Only user-initiated seeks
+     * (after _streamKeysReadyForTracking is true) should be recorded.
+     *
+     * This test would fail if someone removed the _streamKeysReadyForTracking check
+     * or set it to true immediately without the timing delays.
+     */
+    it('auto-resume seek is NOT recorded in position history', async () => {
+      ctx.restorePositionAPI = RestorePosition.init({ getVideoElement: ctx.getVideoElement });
+      const state = ctx.restorePositionAPI.getState();
+
+      // Simulate service auto-resume: video loads and service seeks to saved position
+      // (uses simulateVideoLoad which triggers canplay/playing events)
+      const resumePosition = SEEK_MIN_DIFF_SECONDS + 500;
+      simulateVideoLoad(ctx.video, resumePosition);
+
+      // This auto-resume seek should NOT be recorded (tracking not ready)
+      expect(state.positionHistory).toHaveLength(0);
+
+      // Wait for full initialization
+      vi.advanceTimersByTime(LOAD_TIME_CAPTURE_DELAY_MS + READY_FOR_TRACKING_DELAY_MS + 100);
+
+      // Load time captured, history still empty
+      expect(state.loadTimePosition).toBe(resumePosition);
+      expect(state.positionHistory).toHaveLength(0);
+
+      // Simulate user watched for a while and is now at a different position
+      // (far enough from load time to not be blocked by proximity check)
+      const currentWatchPosition = resumePosition + SEEK_MIN_DIFF_SECONDS + 100;
+      ctx.video._setCurrentTime(currentWatchPosition);
+
+      // MANUAL SETUP: jsdom doesn't run RAF, so we must set stable time values
+      // to simulate what the RAF loop would do in production
+      const augmentedVideo = ctx.getVideoElement() as StreamKeysVideoElement;
+      augmentedVideo._streamKeysStableTime = currentWatchPosition;
+      augmentedVideo._streamKeysLastKnownTime = currentWatchPosition;
+
+      // Now user seeks - should be tracked
+      const userSeekTarget = currentWatchPosition + SEEK_MIN_DIFF_SECONDS + 200;
+      simulateSeek(ctx.video, userSeekTarget);
+
+      // Should save the position user was at before seeking
+      expect(state.positionHistory).toHaveLength(1);
+      expect(state.positionHistory[0].time).toBe(currentWatchPosition);
+    });
+
+    /**
+     * Test: Seek from non-zero position during load phase is NOT recorded
+     *
+     * This tests a scenario where a video starts at a position > SEEK_MIN_DIFF_SECONDS
+     * (e.g., resuming a previous session), then seeks during the load phase.
+     * The initial seek should NOT be recorded because tracking isn't ready yet.
+     *
+     * This test would FAIL if someone set _streamKeysReadyForTracking = true immediately,
+     * because the stable time (which starts at startPosition >= 15s) would pass the
+     * SEEK_MIN_DIFF_SECONDS check and would be incorrectly saved.
+     */
+    it('seek from non-zero start position during load phase is NOT recorded', async () => {
+      // Start video at a position >= SEEK_MIN_DIFF_SECONDS so stable time is "valid"
+      const startPosition = SEEK_MIN_DIFF_SECONDS + 50;
+      ctx.video._setCurrentTime(startPosition);
+
+      ctx.restorePositionAPI = RestorePosition.init({ getVideoElement: ctx.getVideoElement });
+      const state = ctx.restorePositionAPI.getState();
+      const augmentedVideo = ctx.getVideoElement() as StreamKeysVideoElement;
+
+      // At this point, stable time is initialized to startPosition (>= 15s)
+      // If _streamKeysReadyForTracking were true, the next seek would save startPosition
+      expect(augmentedVideo._streamKeysStableTime).toBe(startPosition);
+
+      // Simulate an immediate seek (e.g., service adjusting playback position)
+      // This should NOT be recorded because tracking isn't ready
+      ctx.video.dispatchEvent(new Event('canplay'));
+      const seekTarget = startPosition + SEEK_MIN_DIFF_SECONDS + 100;
+      simulateSeek(ctx.video, seekTarget);
+
+      // The seek should NOT have been recorded (tracking not ready)
+      // This assertion would FAIL if _streamKeysReadyForTracking started as true
+      expect(state.positionHistory).toHaveLength(0);
+
+      // Wait for tracking to be ready
+      vi.advanceTimersByTime(LOAD_TIME_CAPTURE_DELAY_MS + READY_FOR_TRACKING_DELAY_MS + 100);
+
+      // History should still be empty - the early seek was correctly ignored
+      expect(state.positionHistory).toHaveLength(0);
+    });
+  });
 });

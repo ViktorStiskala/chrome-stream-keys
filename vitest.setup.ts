@@ -4,7 +4,7 @@ import { resolve } from 'path';
 /**
  * Load a DOM fixture from resources/dom/ into the document
  */
-export function loadFixture(name: 'disney' | 'hbomax' | 'youtube'): void {
+export function loadFixture(name: 'disney' | 'hbomax' | 'youtube' | 'bbc'): void {
   const html = readFileSync(resolve(__dirname, `resources/dom/${name}.html`), 'utf-8');
   document.documentElement.innerHTML = html;
 }
@@ -17,6 +17,7 @@ export function resetFixture(): void {
   document.documentElement.removeAttribute('data-streamkeys-disney');
   document.documentElement.removeAttribute('data-streamkeys-hbomax');
   document.documentElement.removeAttribute('data-streamkeys-youtube');
+  document.documentElement.removeAttribute('data-streamkeys-bbc');
 }
 
 /**
@@ -212,10 +213,7 @@ export function simulateSeeked(video: MockVideoElement): void {
  * 3. Player auto-seeks to resume position (like streaming services do)
  * 4. Fires seeking/seeked for the resume
  */
-export function simulateVideoLoad(
-  video: MockVideoElement,
-  resumePosition: number
-): void {
+export function simulateVideoLoad(video: MockVideoElement, resumePosition: number): void {
   // Initial load at 0:00
   video._setCurrentTime(0);
   video.dispatchEvent(new Event('canplay'));
@@ -225,5 +223,128 @@ export function simulateVideoLoad(
   if (resumePosition > 0) {
     simulateSeek(video, resumePosition);
   }
+}
+
+/**
+ * Return type for createBBCShadowDOM helper
+ */
+export interface BBCShadowDOMElements {
+  toucan: HTMLElement;
+  videoLayout: HTMLElement;
+  video: HTMLVideoElement;
+  playPauseButton: HTMLButtonElement;
+  fullscreenButton: HTMLButtonElement;
+  backwardButton: HTMLButtonElement;
+  forwardButton: HTMLButtonElement;
+  subtitleToggle: HTMLElement;
+  setSubtitlesOn: (on: boolean) => void;
+}
+
+/**
+ * Create BBC iPlayer's nested Shadow DOM structure for testing.
+ *
+ * Structure:
+ * - smp-toucan-player [shadow]
+ *   - smp-playback [shadow]
+ *     - video
+ *   - smp-video-layout [shadow]
+ *     - smp-core-controls [shadow]
+ *       - smp-play-pause-button [shadow] → button
+ *       - smp-fullscreen-button [shadow] → button
+ *       - smp-interval-button.backward_interval [shadow] → button
+ *       - smp-interval-button.forward_interval [shadow] → button
+ *     - smp-secondary-controls [shadow]
+ *       - smp-subtitles-settings-panel [shadow]
+ *         - smp-toggle.subs_toggle [shadow]
+ *           - .toggle (div with role="checkbox" and aria-checked)
+ */
+export function createBBCShadowDOM(options?: { subtitlesOn?: boolean }): BBCShadowDOMElements {
+  const subtitlesOn = options?.subtitlesOn ?? false;
+
+  // Create smp-toucan-player
+  const toucan = document.createElement('smp-toucan-player');
+  const toucanShadow = toucan.attachShadow({ mode: 'open' });
+
+  // Create smp-playback with video
+  const playback = document.createElement('smp-playback');
+  const playbackShadow = playback.attachShadow({ mode: 'open' });
+  const video = document.createElement('video');
+  video.id = 'smpVideoElement';
+  playbackShadow.appendChild(video);
+  toucanShadow.appendChild(playback);
+
+  // Create smp-video-layout
+  const videoLayout = document.createElement('smp-video-layout');
+  const videoLayoutShadow = videoLayout.attachShadow({ mode: 'open' });
+  toucanShadow.appendChild(videoLayout);
+
+  // Create smp-core-controls
+  const coreControls = document.createElement('smp-core-controls');
+  const coreControlsShadow = coreControls.attachShadow({ mode: 'open' });
+  videoLayoutShadow.appendChild(coreControls);
+
+  // Helper to create a button element inside a custom element with shadow
+  const createButtonElement = (tagName: string, className?: string): HTMLButtonElement => {
+    const element = document.createElement(tagName);
+    if (className) {
+      element.className = className;
+    }
+    const shadow = element.attachShadow({ mode: 'open' });
+    const button = document.createElement('button');
+    shadow.appendChild(button);
+    coreControlsShadow.appendChild(element);
+    return button;
+  };
+
+  // Create control buttons
+  const playPauseButton = createButtonElement('smp-play-pause-button');
+  const fullscreenButton = createButtonElement('smp-fullscreen-button');
+  const backwardButton = createButtonElement('smp-interval-button', 'backward_interval');
+  const forwardButton = createButtonElement('smp-interval-button', 'forward_interval');
+
+  // Create smp-secondary-controls
+  const secondaryControls = document.createElement('smp-secondary-controls');
+  const secondaryControlsShadow = secondaryControls.attachShadow({ mode: 'open' });
+  videoLayoutShadow.appendChild(secondaryControls);
+
+  // Create smp-subtitles-settings-panel
+  const settingsPanel = document.createElement('smp-subtitles-settings-panel');
+  const settingsPanelShadow = settingsPanel.attachShadow({ mode: 'open' });
+  secondaryControlsShadow.appendChild(settingsPanel);
+
+  // Create smp-toggle.subs_toggle
+  const smpToggle = document.createElement('smp-toggle');
+  smpToggle.className = 'subs_toggle';
+  const smpToggleShadow = smpToggle.attachShadow({ mode: 'open' });
+  settingsPanelShadow.appendChild(smpToggle);
+
+  // Create .toggle div with role="checkbox" and aria-checked
+  const toggleDiv = document.createElement('div');
+  toggleDiv.className = 'toggle';
+  toggleDiv.setAttribute('role', 'checkbox');
+  toggleDiv.setAttribute('aria-checked', subtitlesOn ? 'true' : 'false');
+  smpToggleShadow.appendChild(toggleDiv);
+
+  // Create .toggleSlot inside .toggle (for completeness)
+  const toggleSlot = document.createElement('div');
+  toggleSlot.className = 'toggleSlot';
+  toggleDiv.appendChild(toggleSlot);
+
+  // Append to document
+  document.body.appendChild(toucan);
+
+  return {
+    toucan,
+    videoLayout,
+    video,
+    playPauseButton,
+    fullscreenButton,
+    backwardButton,
+    forwardButton,
+    subtitleToggle: toggleDiv,
+    setSubtitlesOn: (on: boolean) => {
+      toggleDiv.setAttribute('aria-checked', on ? 'true' : 'false');
+    },
+  };
 }
 
