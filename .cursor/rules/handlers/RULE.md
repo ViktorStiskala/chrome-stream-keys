@@ -26,6 +26,29 @@ Service handlers provide a config object to `createHandler()`:
 - `getPlaybackTime`: Custom playback time getter for services where `video.currentTime` is unreliable
 - `getDuration`: Custom duration getter for services where `video.duration` is unreliable
 - `getVideo`: Custom video element selector for services with multiple video elements
+- `positionTrackingTiming`: Custom timing for position tracking settling delays (see below)
+
+## Position Tracking Timing Configuration
+
+Services can customize the settling delays for position tracking via `positionTrackingTiming`:
+
+- `loadTimeCaptureDelay`: Delay before capturing load time position (default: 1000ms)
+- `readyForTrackingDelay`: Delay after load time capture before tracking seeks (default: 500ms)
+
+**When to customize:**
+- Services with fast/no auto-resume (e.g., YouTube): Use shorter delays
+- Services with slow auto-resume: May need longer delays
+
+```typescript
+Handler.create({
+  name: 'YouTube',
+  // ...
+  positionTrackingTiming: {
+    loadTimeCaptureDelay: 500,   // YouTube auto-resumes faster
+    readyForTrackingDelay: 250,
+  },
+});
+```
 
 ## Feature Flags
 
@@ -33,8 +56,19 @@ All features are enabled by default. Set to `false` to disable:
 
 - `subtitles`: Automatic subtitle language selection
 - `restorePosition`: Position history and restore dialog
-- `keyboard`: Keyboard shortcut handling
+- `keyboard`: Keyboard shortcut handling (arrow keys, space, etc.) AND Media Session capture (media keys). Disabling this prevents the handler from overriding the service's native keyboard and media key handlers.
 - `fullscreenOverlay`: Click overlay for fullscreen mode
+
+**Important**: The `keyboard` flag controls:
+1. Arrow key seeking
+2. Space/F key shortcuts
+3. Media Session handler setup (media keys)
+
+**Restore Dialog Key**: When `keyboard: false` but `restorePosition: true`, a minimal keyboard handler is set up that only handles:
+- `R` key to open the restore dialog
+- Dialog keys (ESC to close, number keys for selection)
+
+This allows services like YouTube to disable all keyboard shortcuts while still allowing users to access the position restore feature via the "R" key.
 
 ## Position Tracking Flag Reset Strategies
 

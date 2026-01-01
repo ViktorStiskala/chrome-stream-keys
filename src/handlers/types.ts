@@ -1,6 +1,7 @@
 // Handler type definitions
 
 import type { SubtitleConfig, FeatureFlags } from '@/types';
+import type { TrackingTimingConfig } from '@/features';
 
 export interface HandlerConfig {
   name: string;
@@ -29,6 +30,12 @@ export interface HandlerConfig {
    * Disney+ provides custom implementation that clicks timeline.
    */
   seekToTime?: (time: number, duration: number) => boolean;
+  /**
+   * Custom timing for position tracking settling delays.
+   * Allows services to customize how long to wait before capturing load time
+   * and when to start tracking seeks.
+   */
+  positionTrackingTiming?: TrackingTimingConfig;
   subtitles?: SubtitleConfig;
   features?: FeatureFlags;
 }

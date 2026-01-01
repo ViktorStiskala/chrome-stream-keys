@@ -47,6 +47,7 @@ interface ServiceHandler {
 const handlers: ServiceHandler[] = [
   { urlPattern: 'disneyplus.com', handlerFile: 'src/services/disney.js' },
   { urlPattern: 'hbomax.com', handlerFile: 'src/services/hbomax.js' },
+  { urlPattern: 'youtube.com', handlerFile: 'src/services/youtube.js' },
 ];
 
 /**
@@ -182,6 +183,48 @@ function handleBeforeNavigate(details: WebNavigation.OnBeforeNavigateDetailsType
   }
 }
 
+/**
+ * Handle SPA navigation (History API pushState/replaceState)
+ * Used for sites like YouTube that navigate without full page reloads
+ */
+function handleHistoryStateUpdated(details: WebNavigation.OnHistoryStateUpdatedDetailsType): void {
+  // Only handle main frame
+  if (details.frameId !== 0) {
+    return;
+  }
+
+  const handler = findHandler(details.url);
+  if (!handler) {
+    return;
+  }
+
+  // Check if already injected for this tab
+  const previousHandler = injectedTabs.get(details.tabId);
+  if (previousHandler === handler.handlerFile) {
+    if (__DEV__) {
+      Debug.event('WebNavigation.onHistoryStateUpdated', details, 'already injected, skipping');
+    }
+    return;
+  }
+
+  if (__DEV__) {
+    Debug.event(
+      'WebNavigation.onHistoryStateUpdated',
+      details,
+      `injecting handler=${handler.handlerFile}`
+    );
+  }
+
+  injectedTabs.set(details.tabId, handler.handlerFile);
+  injectHandler(details.tabId, handler.handlerFile).catch((err) => {
+    if (__DEV__) {
+      Debug.event('WebNavigation.onHistoryStateUpdated', details, `injection failed: ${err}`);
+    }
+    // Injection failed, allow retry
+    injectedTabs.delete(details.tabId);
+  });
+}
+
 // Internal API (for testing/debugging)
 export const Background = {
   findHandler,
@@ -189,12 +232,14 @@ export const Background = {
   handleNavigationComplete,
   handleTabRemoved,
   handleBeforeNavigate,
+  handleHistoryStateUpdated,
 };
 
 // Set up event listeners
 browser.webNavigation.onCompleted.addListener(handleNavigationComplete);
 browser.tabs.onRemoved.addListener(handleTabRemoved);
 browser.webNavigation.onBeforeNavigate.addListener(handleBeforeNavigate);
+browser.webNavigation.onHistoryStateUpdated.addListener(handleHistoryStateUpdated);
 
 // Open settings when clicking the extension icon
 browser.action.onClicked.addListener(() => {

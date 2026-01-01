@@ -4,7 +4,7 @@ import { resolve } from 'path';
 /**
  * Load a DOM fixture from resources/dom/ into the document
  */
-export function loadFixture(name: 'disney' | 'hbomax'): void {
+export function loadFixture(name: 'disney' | 'hbomax' | 'youtube'): void {
   const html = readFileSync(resolve(__dirname, `resources/dom/${name}.html`), 'utf-8');
   document.documentElement.innerHTML = html;
 }
@@ -16,6 +16,7 @@ export function resetFixture(): void {
   document.documentElement.innerHTML = '';
   document.documentElement.removeAttribute('data-streamkeys-disney');
   document.documentElement.removeAttribute('data-streamkeys-hbomax');
+  document.documentElement.removeAttribute('data-streamkeys-youtube');
 }
 
 /**

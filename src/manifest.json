@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Stream Keys - Video Keyboard Controls",
-  "description": "Fixed spacebar behavior and added keyboard shortcuts for players on Disney+ and HBO Max.",
+  "description": "Keyboard shortcuts and position restore for YouTube, Disney+, and HBO Max video players.",
   "version": "0.0.0",
   "icons": {
     "16": "logo/StreamKeys_16.png",
@@ -13,13 +13,17 @@
     "service_worker": "src/background/index.ts"
   },
   "permissions": ["webNavigation", "scripting", "storage"],
-  "host_permissions": ["https://*.disneyplus.com/*", "https://*.hbomax.com/*"],
+  "host_permissions": [
+    "https://*.disneyplus.com/*",
+    "https://*.hbomax.com/*",
+    "https://*.youtube.com/*"
+  ],
   "options_page": "src/settings/settings.html",
   "action": {},
   "web_accessible_resources": [
     {
       "resources": ["src/services/*.js"],
-      "matches": ["https://*.disneyplus.com/*", "https://*.hbomax.com/*"]
+      "matches": ["https://*.disneyplus.com/*", "https://*.hbomax.com/*", "https://*.youtube.com/*"]
     }
   ]
 }
