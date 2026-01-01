@@ -48,6 +48,7 @@ const handlers: ServiceHandler[] = [
   { urlPattern: 'disneyplus.com', handlerFile: 'src/services/disney.js' },
   { urlPattern: 'hbomax.com', handlerFile: 'src/services/hbomax.js' },
   { urlPattern: 'youtube.com', handlerFile: 'src/services/youtube.js' },
+  { urlPattern: 'bbc.co.uk/iplayer', handlerFile: 'src/services/bbc.js' },
 ];
 
 /**

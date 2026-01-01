@@ -36,10 +36,11 @@ export interface FeatureFlags {
   fullscreenOverlay?: boolean;
 }
 
-// Global window augmentation for settings
+// Global window augmentation for settings and shadow patcher
 declare global {
   interface Window {
     __streamKeysSettings?: StreamKeysSettings;
+    __getShadowRoot?: (element: Element) => ShadowRoot | undefined;
   }
 }
 

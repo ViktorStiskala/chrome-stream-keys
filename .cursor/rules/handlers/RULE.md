@@ -1,5 +1,5 @@
 ---
-description: Handler configuration, feature flags, and position tracking for StreamKeys service handlers. Apply this rule when working with createHandler() in src/handlers/factory.ts, implementing or modifying service handlers in src/services/, configuring feature flags (subtitles, restorePosition, keyboard, fullscreenOverlay), implementing seek button interception, or debugging position history recording. Essential for understanding: getPlayer, getButton, getSeekButtons, seekByDelta, seekToTime, getPlaybackTime, getDuration config properties; the isKeyboardOrButtonSeek flag and its reset strategies (event-based vs timeout); pointerdown vs click event handling; and position history debouncing (keyboard seeks debounced, timeline clicks not). Relevant keywords: handler, createHandler, feature flag, seek, position history, debounce, media keys, button interception.
+description: Handler configuration, feature flags, and position tracking for StreamKeys service handlers. Apply this rule when working with createHandler() in src/handlers/factory.ts, implementing or modifying service handlers in src/services/, configuring feature flags (subtitles, restorePosition, keyboard, fullscreenOverlay), implementing seek button interception, debugging position history recording, or accessing elements inside Shadow DOM. Essential for understanding: getPlayer, getButton, getSeekButtons, seekByDelta, seekToTime, getPlaybackTime, getDuration config properties; the isKeyboardOrButtonSeek flag and its reset strategies (event-based vs timeout); pointerdown vs click event handling; position history debouncing (keyboard seeks debounced, timeline clicks not); and shadow DOM access patterns (shadow patcher, nested shadow traversal). Relevant keywords: handler, createHandler, feature flag, seek, position history, debounce, media keys, button interception, shadow DOM, shadowRoot, attachShadow, nested shadow.
 ---
 
 # Handler Configuration with Feature Flags
@@ -27,6 +27,84 @@ Service handlers provide a config object to `createHandler()`:
 - `getDuration`: Custom duration getter for services where `video.duration` is unreliable
 - `getVideo`: Custom video element selector for services with multiple video elements
 - `positionTrackingTiming`: Custom timing for position tracking settling delays (see below)
+
+## Shadow DOM Access
+
+Some streaming services use Shadow DOM to encapsulate their player elements. When elements are inside shadow roots, `document.querySelector()` cannot find them - not even for open shadow roots.
+
+### Shadow Patcher
+
+The shadow patcher (`src/shadow-patcher.ts`) intercepts `Element.prototype.attachShadow()` calls to store references to all shadow roots, including closed ones. This allows accessing elements that would otherwise be inaccessible.
+
+**How it works:**
+
+1. Injected via content script at `document_start` (before page JS runs)
+2. Overrides `attachShadow()` to store shadow root references in a WeakMap
+3. Exposes `window.__getShadowRoot(element)` to retrieve stored references
+
+**Configuration:** Add to `manifest.json` content_scripts for services that need it:
+
+```json
+"content_scripts": [
+  {
+    "matches": ["https://*.example.com/*"],
+    "js": ["src/shadow-patcher.js"],
+    "run_at": "document_start",
+    "world": "MAIN"
+  }
+]
+```
+
+### Accessing Shadow DOM in Handlers
+
+Use this helper pattern to access shadow roots (falls back to native `.shadowRoot` if patcher unavailable):
+
+```typescript
+function getShadowRoot(element: Element | null): ShadowRoot | null {
+  if (!element) return null;
+  return window.__getShadowRoot?.(element) ?? element.shadowRoot ?? null;
+}
+```
+
+### Nested Shadow DOM
+
+Some services (like BBC iPlayer) have elements nested multiple levels deep in shadow roots:
+
+```
+document
+└── player-element [shadow root]
+    └── layout-element [shadow root]
+        └── controls-element [shadow root]
+            └── button-element [shadow root]
+                └── button
+```
+
+Use a traversal helper to navigate through nested shadow roots:
+
+```typescript
+function getNestedShadow(
+  root: Document | ShadowRoot,
+  ...selectors: string[]
+): ShadowRoot | null {
+  let parent: Document | ShadowRoot = root;
+  for (const selector of selectors) {
+    const element = parent.querySelector(selector);
+    const shadow = getShadowRoot(element);
+    if (!shadow) return null;
+    parent = shadow;
+  }
+  return parent as ShadowRoot;
+}
+
+// Usage: traverse document → player [shadow] → layout [shadow] → controls [shadow]
+const controlsShadow = getNestedShadow(document, 'player-element', 'layout-element', 'controls-element');
+```
+
+### When to Use
+
+- **Closed shadow DOM**: Service uses `attachShadow({ mode: 'closed' })` - patcher required
+- **Nested shadow DOM**: Elements are 2+ levels deep in shadow roots - traversal helper needed
+- **Open shadow DOM (single level)**: Can use native `.shadowRoot` directly, patcher optional
 
 ## Position Tracking Timing Configuration
 

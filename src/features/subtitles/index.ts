@@ -61,6 +61,15 @@ function initSubtitles(config: SubtitlesConfig): SubtitlesAPI {
     } else {
       // Find matching language from preferences
       const available = subtitles.getAvailable();
+
+      // Simple toggle: if only one option available, just toggle it (e.g., BBC iPlayer)
+      if (available.length === 1) {
+        if (__DEV__) Debug.action('Subtitles: On', available[0].label);
+        subtitles.selectLanguage(available[0]);
+        Banner.show(available[0].label);
+        return;
+      }
+
       const match = findMatchingLanguage(preferences, available);
 
       if (match) {

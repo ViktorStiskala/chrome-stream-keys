@@ -74,7 +74,7 @@ export default defineConfig(({ command, mode }) => {
       ...(isDebugMode ? [DebugLogger.plugin()] : []),
       webExtension({
         manifest: 'src/manifest.json',
-        additionalInputs: ['src/services/disney.ts', 'src/services/hbomax.ts', 'src/services/youtube.ts'],
+        additionalInputs: ['src/services/disney.ts', 'src/services/hbomax.ts', 'src/services/youtube.ts', 'src/services/bbc.ts', 'src/shadow-patcher.ts'],
         // Target browser for manifest transformations and web-ext
         browser,
         // Transform manifest: inject version from package.json and Firefox compatibility
