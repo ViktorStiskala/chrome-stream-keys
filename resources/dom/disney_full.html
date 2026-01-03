@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="cs">
   <head>
     <base href="/" />
@@ -30,8 +31,8 @@
     <meta property="og:image" content="https://static-assets.bamgrid.com/product/disneyplus/favicons/share-icon.e729f2da6941ab04b7d603d43f911569.png" />
     <meta name="twitter:image" content="https://static-assets.bamgrid.com/product/disneyplus/favicons/share-icon.e729f2da6941ab04b7d603d43f911569.png" />
 
-    <meta property="og:url" content="https://www.disneyplus.com/cs-cz/home" />
-    <meta name="twitter:url" content="https://www.disneyplus.com/cs-cz/home" />
+    <meta property="og:url" content="https://www.disneyplus.com/cs-cz/play/5311b05a-88c3-409d-85ef-3d05715c07b0" />
+    <meta name="twitter:url" content="https://www.disneyplus.com/cs-cz/play/5311b05a-88c3-409d-85ef-3d05715c07b0" />
 
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
@@ -62,14 +63,14 @@
               <div id="app_body_content" data-testid="adult-enabled-profile">
                 <div id="hudson-wrapper" class="sc-BngTV fXYQOb video_view--theater">
                   <div class="sc-bFADNz irQoou hudson-container body-copy">
-                    <div class="btm-media-player playback-experience-v2 btm-media-player-idle">
+                    <div class="btm-media-player playback-experience-v2">
                       <div class="btm-media-clients">
-                        <disney-web-player id="player-390f6c6d-a501-4ccb-9ef2-075b149603d6">
-                          <div class="btm-media-client" id="bamtech-media-player--1767481396913">
-                            <div id="media-element-container-7ae864e0-a867-4d0d-9752-6c9882ea5adc" class="media-element-container">
+                        <disney-web-player id="player-45664a11-5bde-4b06-9015-dc5205785f95">
+                          <div class="btm-media-client" id="bamtech-media-player--1767484015709">
+                            <div id="media-element-container-9fb0274f-109e-4eeb-a01e-f95a3b60c6ef" class="media-element-container">
                               <video disablepictureinpicture="true" tabindex="-1" class="btm-media-client-element fontDefault fontColorWhite fontOpacity100 fontSize32 fontEdgeNone backgroundColorBlack backgroundOpacity75 windowColorWhite windowOpacity0"></video>
-                              <video id="hivePlayer1" class="btm-media-client-element fontDefault fontColorWhite fontOpacity100 fontSize32 fontEdgeNone backgroundColorBlack backgroundOpacity75 windowColorWhite windowOpacity0" disablepictureinpicture="true" src="blob:https://www.disneyplus.com/7dde7adb-9c87-42d0-b225-edcd85b2f7ac"></video>
-                              <div class="TimedTextOverlay"><div class="hive-subtitle-renderer-wrapper"></div></div>
+                              <video id="hivePlayer1" class="btm-media-client-element fontDefault fontColorWhite fontOpacity100 fontSize32 fontEdgeNone backgroundColorBlack backgroundOpacity75 windowColorWhite windowOpacity0" disablepictureinpicture="true" src="blob:https://www.disneyplus.com/b3d59503-02d5-4f07-8ee9-cfb1706b383d"></video>
+                              <div class="TimedTextOverlay above-progress-bar"></div>
                               <div class="DxcOverlay"></div>
                               <div><div></div></div>
                               <div><div></div></div>
@@ -79,7 +80,7 @@
                         </disney-web-player>
                         <disney-web-player-ui>
                           <div class="btm-media-overlays-container">
-                            <div class="overlay overlay__controls overlay__controls--visually-hide">
+                            <div class="overlay overlay__controls overlay__controls--visually-show">
                               <div class="controls controls__content is-tabbing-false">
                                 <div class="controls__header">
                                   <div class="title-bug-area">
@@ -203,7 +204,7 @@
                                                   <div class="options-picker subtitle-track-picker" id="subtitleTrackPicker" aria-label="Subtitle Track Picker">
                                                     <div class="">
                                                       <div>
-                                                        <input id="subtitleTrackPicker-off" name="subtitleTrackPicker" type="radio" tabindex="-1" role="listitem" value="off" />
+                                                        <input id="subtitleTrackPicker-off" name="subtitleTrackPicker" type="radio" tabindex="-1" role="listitem" value="off" checked="" />
                                                         <label for="subtitleTrackPicker-off" class="picker-item picker-item-off body-copy">Vypnuto</label>
                                                       </div>
                                                     </div>
@@ -239,7 +240,7 @@
                                                     </div>
                                                     <div class="avenir-mini inspire-mini">
                                                       <div>
-                                                        <input id="subtitleTrackPicker-5" name="subtitleTrackPicker" type="radio" tabindex="-1" role="listitem" value="5" checked="" />
+                                                        <input id="subtitleTrackPicker-5" name="subtitleTrackPicker" type="radio" tabindex="-1" role="listitem" value="5" />
                                                         <label for="subtitleTrackPicker-5" class="picker-item picker-item-5 body-copy">English [CC]</label>
                                                       </div>
                                                     </div>
@@ -368,46 +369,258 @@
                                   <div class="controls__footer__wrapper display-flex">
                                     <div class="controls__left"></div>
                                     <div class="controls__center">
-                                      <restart-playback class="restart-playback"></restart-playback>
-                                      <quick-rewind class="quick-rewind"></quick-rewind>
-                                      <toggle-play-pause class="toggle-play-pause"></toggle-play-pause>
-                                      <quick-fast-forward class="quick-fast-forward"></quick-fast-forward>
-                                      <live-button class="live-button" hidden=""></live-button>
-                                      <play-next class="play-next" hidden=""></play-next>
+                                      <restart-playback class="restart-playback">
+                                        <template shadowroot="open">
+                                          <!---->
+                                          <info-tooltip tooltipposition="top-center" tooltiplabel="Sledovat od začátku">
+                                            <!--?lit$385850487$-->
+                                            <div role="button" aria-label="Sledovat od začátku" aria-disabled="false" aria-pressed="" class="button-container" tabindex="0">
+                                              <!--?lit$385850487$-->
+                                              <button tabindex="-1" aria-hidden="true" class="restart-playback control" part="restart-playback" style="">
+                                                <!--?lit$385850487$-->
+                                              </button>
+                                            </div>
+
+                                            <template shadowroot="open">
+                                              <!---->
+                                              <div class="tooltip-container">
+                                                <div class="tooltip" data-position="top-center" style="display: none">
+                                                  <span class="tooltip-label">
+                                                    <!--?lit$385850487$-->
+                                                    Sledovat od začátku
+                                                  </span>
+                                                </div>
+                                                <slot></slot>
+                                              </div>
+                                            </template>
+                                          </info-tooltip>
+                                        </template>
+                                      </restart-playback>
+                                      <quick-rewind class="quick-rewind">
+                                        <template shadowroot="open">
+                                          <!---->
+                                          <info-tooltip tooltipposition="top-center" tooltiplabel="ZPÁTKY O 10 S">
+                                            <!--?lit$385850487$-->
+                                            <div role="button" aria-label="Vrátit se o deset sekund" aria-disabled="false" aria-pressed="" class="button-container" tabindex="0">
+                                              <!--?lit$385850487$-->
+                                              <button tabindex="-1" aria-hidden="true" class="quick-rw control" part="quick-rewind-icon" style="--control--mask: var(--quick-rewind-10)">
+                                                <!--?lit$385850487$-->
+                                              </button>
+                                            </div>
+
+                                            <template shadowroot="open">
+                                              <!---->
+                                              <div class="tooltip-container">
+                                                <div class="tooltip" data-position="top-center" style="display: none">
+                                                  <span class="tooltip-label">
+                                                    <!--?lit$385850487$-->
+                                                    ZPÁTKY O 10 S
+                                                  </span>
+                                                </div>
+                                                <slot></slot>
+                                              </div>
+                                            </template>
+                                          </info-tooltip>
+                                        </template>
+                                      </quick-rewind>
+                                      <toggle-play-pause class="toggle-play-pause">
+                                        <template shadowroot="open">
+                                          <!---->
+                                          <info-tooltip tooltipposition="top-center" tooltiplabel="Pozastavit">
+                                            <!--?lit$385850487$-->
+                                            <div role="button" aria-label="Pozastavit" aria-disabled="false" aria-pressed="" class="button-container" tabindex="0">
+                                              <!--?lit$385850487$-->
+                                              <button tabindex="-1" aria-hidden="true" class="pause-button control" part="pause-button control" style="">
+                                                <!--?lit$385850487$-->
+                                              </button>
+                                            </div>
+
+                                            <template shadowroot="open">
+                                              <!---->
+                                              <div class="tooltip-container">
+                                                <div class="tooltip" data-position="top-center" style="display: none">
+                                                  <span class="tooltip-label">
+                                                    <!--?lit$385850487$-->
+                                                    Pozastavit
+                                                  </span>
+                                                </div>
+                                                <slot></slot>
+                                              </div>
+                                            </template>
+                                          </info-tooltip>
+                                        </template>
+                                      </toggle-play-pause>
+                                      <quick-fast-forward class="quick-fast-forward">
+                                        <template shadowroot="open">
+                                          <!---->
+                                          <info-tooltip tooltipposition="top-center" tooltiplabel="DOPŘEDU O 10 S">
+                                            <!--?lit$385850487$-->
+                                            <div role="button" aria-label="Posunout dopředu o deset sekund" aria-disabled="false" aria-pressed="" class="button-container" tabindex="0">
+                                              <!--?lit$385850487$-->
+                                              <button tabindex="-1" aria-hidden="true" class="quick-fast-forward-icon control" part="quick-fast-forward-icon" style="--control--mask: var(--quick-fast-forward-10)">
+                                                <!--?lit$385850487$-->
+                                              </button>
+                                            </div>
+
+                                            <template shadowroot="open">
+                                              <!---->
+                                              <div class="tooltip-container">
+                                                <div class="tooltip" data-position="top-center" style="display: none">
+                                                  <span class="tooltip-label">
+                                                    <!--?lit$385850487$-->
+                                                    DOPŘEDU O 10 S
+                                                  </span>
+                                                </div>
+                                                <slot></slot>
+                                              </div>
+                                            </template>
+                                          </info-tooltip>
+                                        </template>
+                                      </quick-fast-forward>
+                                      <live-button class="live-button" hidden="">
+                                        <template shadowroot="open"><!----></template>
+                                      </live-button>
+                                      <play-next class="play-next" hidden="">
+                                        <template shadowroot="open"><!----></template>
+                                      </play-next>
                                     </div>
                                     <div class="controls__right">
-                                      <toggle-mute-button class="mute-btn" direction="from-bottom" includevolumebar="true"></toggle-mute-button>
-                                      <toggle-fullscreen class="toggle-fullscreen-button"></toggle-fullscreen>
+                                      <toggle-mute-button class="mute-btn" direction="from-bottom" includevolumebar="true">
+                                        <template shadowroot="open">
+                                          <!---->
+                                          <div class="audio-control-container from-bottom">
+                                            <info-tooltip tooltipposition="top-center" tooltiplabel="Zapnout zvuk">
+                                              <!--?lit$385850487$-->
+                                              <div role="button" aria-label="Zapnout zvuk" aria-disabled="false" aria-pressed="" class="button-container" tabindex="0">
+                                                <!--?lit$385850487$-->
+                                                <button tabindex="-1" aria-hidden="true" class="toggle-mute-button control volume-muted" part="" style="">
+                                                  <!--?lit$385850487$-->
+                                                </button>
+                                              </div>
+
+                                              <template shadowroot="open">
+                                                <!---->
+                                                <slot></slot>
+                                              </template>
+                                            </info-tooltip>
+                                            <!--?lit$385850487$-->
+                                            <div class="volume-bar-container">
+                                              <volume-bar direction="from-bottom">
+                                                <template shadowroot="open">
+                                                  <!---->
+                                                  <div class="volume-bar__container from-bottom" tabindex="0" aria-label="Hlasitost">
+                                                    <div class="volume-bar__max-level">
+                                                      <div class="volume-bar__current-level" style="width: inherit; height: 0%"></div>
+                                                      <div class="volume-bar__thumb" role="slider" style="left: calc(50% - 5px); top: calc(100%)" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0 of 100"></div>
+                                                    </div>
+                                                  </div>
+                                                </template>
+                                              </volume-bar>
+                                            </div>
+                                          </div>
+                                        </template>
+                                      </toggle-mute-button>
+                                      <toggle-fullscreen class="toggle-fullscreen-button">
+                                        <template shadowroot="open">
+                                          <!---->
+                                          <info-tooltip tooltipposition="top-center" tooltiplabel="UKONČIT REŽIM CELÉ OBRAZOVKY">
+                                            <!--?lit$385850487$-->
+                                            <div role="button" aria-label="UKONČIT REŽIM CELÉ OBRAZOVKY" aria-disabled="false" aria-pressed="" class="button-container" tabindex="0">
+                                              <!--?lit$385850487$-->
+                                              <button tabindex="-1" aria-hidden="true" class="exit-fullscreen-icon control" part="" style="">
+                                                <!--?lit$385850487$-->
+                                              </button>
+                                            </div>
+                                            <template shadowroot="open">
+                                              <!---->
+                                              <div class="tooltip-container">
+                                                <div class="tooltip" data-position="top-center" style="display: none">
+                                                  <span class="tooltip-label">
+                                                    <!--?lit$385850487$-->
+                                                    UKONČIT REŽIM CELÉ OBRAZOVKY
+                                                  </span>
+                                                </div>
+                                                <slot></slot>
+                                              </div>
+                                            </template>
+                                          </info-tooltip>
+                                        </template>
+                                      </toggle-fullscreen>
                                     </div>
                                   </div>
                                   <div class="controls__footer__progressWrapper display-flex">
-                                    <progress-bar></progress-bar>
-                                    <time-remaining-indicator></time-remaining-indicator>
+                                    <progress-bar>
+                                      <template shadowroot="open">
+                                        <!---->
+                                        <div class="progress-bar__container progress-bar__no-pointer-events progress-bar__vod">
+                                          <div class="progress-bar__total-duration progress-bar__time-bar"></div>
+                                          <div class="progress-bar__pre-tail-end-non-seekable-range" style="left: 0%; width: 0%"></div>
+                                          <div class="progress-bar__post-live-edge-non-seekable-range" style="right: 0px; left: 100%"></div>
+                                          <div class="progress-bar__seekable-range" style="left: 0%; width: 100%" tabindex="0" aria-label="Slider">
+                                            <!--?lit$385850487$-->
+                                            <div class="progress-bar__progress progress-bar__time-bar" style="width: 33.3969%"></div>
+
+                                            <div class="progress-bar__thumb" style="left: 33.3969%" aria-valuemin="0" aria-valuemax="2647" aria-valuenow="884" aria-valuetext="884 of 2647"></div>
+                                            <!--?lit$385850487$-->
+                                            <div class="progress-bar__time-bar progress-bar__ad-marker-container">
+                                              <ad-markers>
+                                                <template shadowroot="open">
+                                                  <!---->
+                                                  <!--?lit$385850487$-->
+                                                  <!--?-->
+                                                </template>
+                                              </ad-markers>
+                                            </div>
+                                            <progress-bar-preview>
+                                              <template shadowroot="open"><!----></template>
+                                            </progress-bar-preview>
+                                            <!--?lit$385850487$-->
+                                            <!--?lit$385850487$-->
+                                          </div>
+                                        </div>
+                                      </template>
+                                    </progress-bar>
+                                    <time-remaining-indicator>
+                                      <template shadowroot="open">
+                                        <!---->
+                                        <div class="time-remaining-indicator">
+                                          <!--?lit$385850487$-->
+                                          29:23
+                                        </div>
+                                      </template>
+                                    </time-remaining-indicator>
                                   </div>
                                   <div class="controls__footer__interstitial_container"></div>
                                 </div>
                               </div>
                             </div>
-                            <div class="overlay overlay__ratings">
-                              <div class="overlay__ratings_wrapper fadeIn visible">
-                                <div class="ratings__rating_container">
-                                  <p class="ratings__rating ratings__rating_text">
-                                    <span class="ratings__rating_rating"><img class="ratings__rating_icon" alt="12+" src="https://disney.images.edge.bamgrid.com/ripcut-delivery/v1/variant/disney/E0F0F2632C94B4DFE3708B15D515B881B46F1FCEB43390C4B8279B1ED850ED9F/scale?width=240" /></span>
-                                    <span class="ratings__rating_description"><span class="ratings__rating_description_text Strach, Hrubý jazyk">Strach, Hrubý jazyk</span></span>
-                                  </p>
-                                </div>
-                                <div class="ratings__advisories_container">
-                                  <p class="ratings__advisory ratings__advisory_disclaimer"><span>Vyobrazení tabáku</span></p>
-                                </div>
-                              </div>
-                            </div>
                           </div>
-                          <ad-badge-overlay></ad-badge-overlay>
-                          <promo-overlay></promo-overlay>
-                          <toast-notification></toast-notification>
+                          <ad-badge-overlay>
+                            <template shadowroot="open"><!----></template>
+                          </ad-badge-overlay>
+                          <promo-overlay>
+                            <template shadowroot="open"><!----></template>
+                          </promo-overlay>
+                          <toast-notification>
+                            <template shadowroot="open"><!----></template>
+                          </toast-notification>
                           <tutorial-overlay></tutorial-overlay>
-                          <service-attribution-overlay></service-attribution-overlay>
-                          <network-attribution-overlay></network-attribution-overlay>
+                          <service-attribution-overlay>
+                            <template shadowroot="open"><!----></template>
+                          </service-attribution-overlay>
+                          <network-attribution-overlay>
+                            <template shadowroot="open">
+                              <!---->
+                              <div class="fadeOut hidden">
+                                <!--?lit$385850487$-->
+                              </div>
+                            </template>
+                          </network-attribution-overlay>
+                          <template shadowroot="open">
+                            <!---->
+                            <!--?lit$385850487$-->
+                            <slot></slot>
+                          </template>
                         </disney-web-player-ui>
                       </div>
                     </div>
@@ -430,7 +643,7 @@
 
     <div id="onetrust-consent-sdk">
       <div class="onetrust-pc-dark-filter ot-hide ot-fade-in"></div>
-      <div id="onetrust-pc-sdk" class="otPcTab ot-hide ot-fade-in ot-sdk-not-webkit" lang="cs-CZ" aria-label="Preferenční centrum" role="region">
+      <div id="onetrust-pc-sdk" class="otPcTab ot-hide ot-fade-in" lang="cs-CZ" aria-label="Preferenční centrum" role="region">
         <div role="alertdialog" aria-modal="true" aria-describedby="ot-pc-desc" aria-label="Centrum předvoleb souborů cookie">
           <div class="ot-pc-header" role="presentation">
             <div class="ot-pc-logo" role="img" aria-label="Logo společnosti"><img alt="Logo společnosti" src="https://cdn.cookielaw.org/logos/8d284a2c-31ac-4530-91f9-e2fb6613e44b/018ee235-cbf5-719e-9cae-8abd62ef9726/82d018d8-3d48-4b72-8c78-6466162f4be9/Disney+_Logo.png" /></div>
@@ -468,6 +681,7 @@
                   <h4 id="ot-pvcy-hdr">Vaše soukromí</h4>
                   <p id="ot-pc-desc" class="ot-grp-desc">
                     Vaše právo na soukromí respektujeme, a&nbsp;proto se můžete rozhodnout, že k&nbsp;některým typům souborů cookie nedáte souhlas. Další informace se zobrazí po kliknutí na různé nadpisy kategorií, kde taky můžete výchozí nastavení změnit. Upozorňujeme, že zablokování některých typů souborů cookie může nepříznivě ovlivnit vaši uživatelskou zkušenost na našich stránkách a&nbsp;služby, které vám můžeme nabízet. Pomocí tohoto nástroje se vám do zařízení uloží soubor cookie, který si zapamatuje vaše předvolby. Ty můžete kdykoli změnit. Další informace se dozvíte v&nbsp;našich
+                    <br />
                     <br />
                     <a href="https://privacy.thewaltdisneycompany.com/cs/" class="privacy-notice-link" rel="noopener" target="_blank" aria-label=", otevírá se na nové záložce.">zásadách používání souborů cookie</a>
                   </p>
@@ -615,7 +829,5 @@
     </div>
     <iframe id="omid_v1_present" name="omid_v1_present" sandbox=""></iframe>
     <iframe id="omid_v1_present_web" name="omid_v1_present_web" sandbox=""></iframe>
-    <iframe id="f6Wuk7bOytZcm8IG" tabindex="-1" height="0" width="0"></iframe>
-    <div tabindex="-1"></div>
   </body>
 </html>
