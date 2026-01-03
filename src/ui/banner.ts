@@ -8,10 +8,13 @@ let bannerTimeout: ReturnType<typeof setTimeout> | null = null;
 
 /**
  * Show a temporary banner notification overlay
+ * @param message - The message to display
+ * @param customContainer - Optional custom container for Shadow DOM environments (e.g., BBC)
  */
-function showBanner(message: string): void {
-  // Remove existing banner
-  const existing = document.getElementById(BANNER_ID);
+function showBanner(message: string, customContainer?: HTMLElement | null): void {
+  // Remove existing banner - search in both document and custom container
+  const existing =
+    document.getElementById(BANNER_ID) ?? customContainer?.querySelector(`#${BANNER_ID}`);
   if (existing) {
     existing.remove();
     if (bannerTimeout) {
@@ -40,9 +43,9 @@ function showBanner(message: string): void {
     transition: opacity 0.3s ease-out;
   `;
 
-  // Append to fullscreen element if in fullscreen, otherwise to body
-  // This ensures the banner is visible when in fullscreen mode
-  const container = Fullscreen.getElement() ?? document.body;
+  // Append to custom container if provided (for Shadow DOM environments like BBC),
+  // otherwise to fullscreen element if in fullscreen, otherwise to body
+  const container = customContainer ?? Fullscreen.getElement() ?? document.body;
   container.appendChild(banner);
 
   // Fade out after delay
