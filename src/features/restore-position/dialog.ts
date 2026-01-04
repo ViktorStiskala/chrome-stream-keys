@@ -84,10 +84,17 @@ function createPositionItem(
   onClick: () => void
 ): HTMLButtonElement {
   const item = document.createElement('button');
-  item.style.cssText = DialogStyles.positionItem;
-
-  item.onmouseenter = () => (item.style.background = Styles.vars.overlay.bgHover);
-  item.onmouseleave = () => (item.style.background = Styles.vars.overlay.bgActive);
+  
+  // Use green styling for user saved position
+  if (pos.isUserSaved) {
+    item.style.cssText = DialogStyles.positionItemUserSaved;
+    item.onmouseenter = () => (item.style.background = Styles.vars.accent.greenHover);
+    item.onmouseleave = () => (item.style.background = Styles.vars.accent.green);
+  } else {
+    item.style.cssText = DialogStyles.positionItem;
+    item.onmouseenter = () => (item.style.background = Styles.vars.overlay.bgHover);
+    item.onmouseleave = () => (item.style.background = Styles.vars.overlay.bgActive);
+  }
 
   // Key hint
   const keyHint = document.createElement('span');
@@ -101,11 +108,13 @@ function createPositionItem(
 
   // Relative time
   const relativeTime = document.createElement('span');
-  if (!pos.isLoadTime) {
+  if (pos.isLoadTime || pos.isUserSaved) {
+    // Static text for load time and user saved positions
+    relativeTime.textContent = pos.relativeText as string;
+  } else {
+    // Dynamic relative time for history positions
     relativeTime.className = RELATIVE_TIME_CLASS;
     relativeTime.dataset.savedAt = String(pos.relativeText);
-  } else {
-    relativeTime.textContent = pos.relativeText as string;
   }
   relativeTime.style.cssText = DialogStyles.relativeTime;
 
@@ -209,18 +218,34 @@ function createRestoreDialog(
   const list = document.createElement('div');
   list.style.cssText = DialogStyles.list;
 
-  const hasLoadTime = allPositions.length > 0 && allPositions[0].isLoadTime;
-  const hasHistoryItems = allPositions.some((pos) => !pos.isLoadTime);
+  const hasLoadTime = allPositions.some((pos) => pos.isLoadTime);
+  const hasUserSaved = allPositions.some((pos) => pos.isUserSaved);
+  const hasHistoryItems = allPositions.some((pos) => !pos.isLoadTime && !pos.isUserSaved);
 
-  allPositions.forEach((pos, index) => {
-    const item = createPositionItem(index, pos, videoDuration, () => {
+  // Key numbering: load time = 0 (reserved), user saved = 1 (reserved), history continues from there
+  // historyStartKey: 1 if no user saved, 2 if user saved exists
+  const historyStartKey = hasUserSaved ? 2 : 1;
+  let historyKeyNumber = historyStartKey;
+
+  allPositions.forEach((pos) => {
+    // Determine key number based on position type
+    let keyNumber: number;
+    if (pos.isLoadTime) {
+      keyNumber = 0;
+    } else if (pos.isUserSaved) {
+      keyNumber = 1;
+    } else {
+      keyNumber = historyKeyNumber++;
+    }
+
+    const item = createPositionItem(keyNumber, pos, videoDuration, () => {
       restorePosition(video, pos.time, seekToTime);
       closeRestoreDialog();
     });
     list.appendChild(item);
 
-    // Add separator after load time if there are history items
-    if (hasLoadTime && hasHistoryItems && index === 0) {
+    // Add separator after load time if there are other items (user saved or history)
+    if (pos.isLoadTime && (hasUserSaved || hasHistoryItems)) {
       const separator = document.createElement('div');
       separator.style.cssText = DialogStyles.separator;
       list.appendChild(separator);
@@ -229,8 +254,13 @@ function createRestoreDialog(
 
   restoreDialog.appendChild(list);
 
-  // Hint text
-  const maxKey = allPositions.length - 1;
+  // Hint text - calculate max key based on what's present
+  const historyCount = allPositions.filter((pos) => !pos.isLoadTime && !pos.isUserSaved).length;
+  const maxKey = historyCount > 0
+    ? historyStartKey + historyCount - 1
+    : hasUserSaved
+      ? 1
+      : 0;
   const hint = document.createElement('div');
   hint.textContent =
     maxKey === 0
@@ -300,14 +330,27 @@ function handleRestoreDialogKeys(
     return true;
   }
 
-  // Handle number keys 0-3
+  // Handle number keys 0-4 (load time = 0, user saved = 1, history = 1 or 2+)
   const keyNum = parseInt(e.key, 10);
-  if (keyNum >= 0 && keyNum <= 3) {
+  if (keyNum >= 0 && keyNum <= 4) {
     e.preventDefault();
     e.stopPropagation();
 
     const allPositions = PositionHistory.getPositions(historyState);
-    const position = allPositions[keyNum];
+
+    // Build key-to-position map (keys are assigned by type, not array index)
+    const hasUserSaved = allPositions.some((pos) => pos.isUserSaved);
+    const historyStartKey = hasUserSaved ? 2 : 1;
+    let historyKeyNumber = historyStartKey;
+
+    let position: RestorePosition | undefined;
+    for (const pos of allPositions) {
+      const posKey = pos.isLoadTime ? 0 : pos.isUserSaved ? 1 : historyKeyNumber++;
+      if (posKey === keyNum) {
+        position = pos;
+        break;
+      }
+    }
 
     if (position) {
       if (__DEV__) Debug.action(`Key: ${keyNum}`, `restore to ${position.label}`);
