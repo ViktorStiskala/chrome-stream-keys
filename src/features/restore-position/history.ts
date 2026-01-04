@@ -20,6 +20,17 @@ export const LOAD_TIME_CAPTURE_DELAY_MS = 1000;
 // Delay after load time capture before tracking seeks (avoids capturing initial seeks)
 export const READY_FOR_TRACKING_DELAY_MS = 500;
 
+// Event emitted when position history changes (for dialog reactivity)
+export const POSITION_HISTORY_CHANGED_EVENT = 'streamkeys:position-history-changed';
+
+/**
+ * Emit event to notify listeners that position history has changed.
+ * Used by the dialog to rebuild its position list reactively.
+ */
+function emitPositionChanged(): void {
+  window.dispatchEvent(new CustomEvent(POSITION_HISTORY_CHANGED_EVENT));
+}
+
 /**
  * Configuration for position tracking timing delays.
  * Services can customize these to match their auto-resume behavior.
@@ -59,6 +70,7 @@ function resetState(state: PositionHistoryState): void {
   state.userSavedPosition = null;
   state.lastSeekTime = 0;
   state.isKeyboardOrButtonSeek = false;
+  emitPositionChanged();
 }
 
 /**
@@ -107,6 +119,7 @@ function savePositionToHistory(state: PositionHistoryState, time: number): boole
   }
 
   console.info(`[StreamKeys] Seek position saved: ${entry.label}`);
+  emitPositionChanged();
   return true;
 }
 
@@ -167,6 +180,7 @@ function saveUserPosition(state: PositionHistoryState, time: number): PositionEn
   state.userSavedPosition = entry;
   console.info(`[StreamKeys] User position saved: ${entry.label}`);
   Banner.show(`Position saved: ${entry.label}`);
+  emitPositionChanged();
   return entry;
 }
 
@@ -302,6 +316,7 @@ function setupVideoTracking(
           console.info(
             `[StreamKeys] Load time position captured: ${Video.formatTime(state.loadTimePosition)}`
           );
+          emitPositionChanged();
         }
 
         if (readyForTrackingTimeout === null) {
