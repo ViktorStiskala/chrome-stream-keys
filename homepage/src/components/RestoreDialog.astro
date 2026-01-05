@@ -1,0 +1,83 @@
+---
+// Visual demo of the position restore dialog
+---
+
+<div class="restore-dialog-demo relative w-full max-w-sm mx-auto">
+  <!-- Mock video background -->
+  <div class="aspect-video bg-gradient-to-br from-[#1a1a2e] to-[#0f0f1a] rounded-lg overflow-hidden relative">
+    <!-- Progress bar mockup -->
+    <div class="absolute bottom-0 left-0 right-0 h-1 bg-[var(--color-surface)]">
+      <div class="h-full bg-[var(--color-accent)] w-[45%]"></div>
+    </div>
+    
+    <!-- Dialog overlay -->
+    <div class="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div class="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl p-4 shadow-2xl w-[280px] animate-fade-in">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-3 pb-2 border-b border-[var(--color-border)]">
+          <span class="text-sm font-medium text-[var(--color-text)]">Jump to Position</span>
+          <span class="text-xs text-[var(--color-text-subtle)]">Press R to close</span>
+        </div>
+        
+        <!-- Current position -->
+        <div class="mb-3 p-2 rounded-lg bg-[var(--color-surface)]">
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-[var(--color-text-muted)]">Current</span>
+            <span class="text-sm font-mono text-[var(--color-text)]">14:32</span>
+          </div>
+          <div class="mt-1 h-1 bg-[var(--color-border)] rounded-full overflow-hidden">
+            <div class="h-full bg-[var(--color-accent)] w-[45%]"></div>
+          </div>
+        </div>
+        
+        <!-- Saved positions -->
+        <div class="space-y-2">
+          <button class="position-item w-full p-2 rounded-lg bg-[var(--color-bg-elevated)] hover:bg-[var(--color-surface)] transition-colors text-left group">
+            <div class="flex items-center gap-2">
+              <span class="w-5 h-5 rounded flex items-center justify-center bg-[var(--color-accent)]/20 text-[var(--color-accent)] text-xs font-mono">1</span>
+              <div class="flex-1">
+                <div class="flex items-center justify-between">
+                  <span class="text-sm font-mono text-[var(--color-text)]">08:15</span>
+                  <span class="text-xs text-[var(--color-text-subtle)]">2m ago</span>
+                </div>
+                <div class="mt-1 h-0.5 bg-[var(--color-border)] rounded-full overflow-hidden">
+                  <div class="h-full bg-[var(--color-gold)] w-[26%]"></div>
+                </div>
+              </div>
+            </div>
+          </button>
+          
+          <button class="position-item w-full p-2 rounded-lg bg-[var(--color-bg-elevated)] hover:bg-[var(--color-surface)] transition-colors text-left group">
+            <div class="flex items-center gap-2">
+              <span class="w-5 h-5 rounded flex items-center justify-center bg-[var(--color-accent)]/20 text-[var(--color-accent)] text-xs font-mono">2</span>
+              <div class="flex-1">
+                <div class="flex items-center justify-between">
+                  <span class="text-sm font-mono text-[var(--color-text)]">03:42</span>
+                  <span class="text-xs text-[var(--color-text-subtle)]">5m ago</span>
+                </div>
+                <div class="mt-1 h-0.5 bg-[var(--color-border)] rounded-full overflow-hidden">
+                  <div class="h-full bg-[var(--color-gold)] w-[12%]"></div>
+                </div>
+              </div>
+            </div>
+          </button>
+          
+          <button class="position-item w-full p-2 rounded-lg bg-[var(--color-bg-elevated)] hover:bg-[var(--color-surface)] transition-colors text-left group">
+            <div class="flex items-center gap-2">
+              <span class="w-5 h-5 rounded flex items-center justify-center bg-[var(--color-accent)]/20 text-[var(--color-accent)] text-xs font-mono">0</span>
+              <div class="flex-1">
+                <div class="flex items-center justify-between">
+                  <span class="text-sm font-mono text-[var(--color-text)]">00:00</span>
+                  <span class="text-xs text-[var(--color-text-subtle)]">start</span>
+                </div>
+                <div class="mt-1 h-0.5 bg-[var(--color-border)] rounded-full overflow-hidden">
+                  <div class="h-full bg-[var(--color-gold)] w-[0%]"></div>
+                </div>
+              </div>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

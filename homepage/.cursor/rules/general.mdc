@@ -1,0 +1,132 @@
+---
+description: Stream Keys Homepage - General Development Notes
+alwaysApply: true
+---
+
+# Stream Keys Homepage Development Notes
+
+## Project Overview
+
+This is the marketing homepage for the Stream Keys browser extension. Built with Astro, Tailwind CSS v4, and TypeScript, deployed to Cloudflare Pages.
+
+## Tech Stack
+
+- **Astro** v5.x - Static site generator
+- **Tailwind CSS** v4 - CSS-first configuration via `@tailwindcss/vite`
+- **TypeScript** - Strict mode enabled
+- **Cloudflare Pages** - Static deployment target
+
+## Project Structure
+
+```
+/homepage
+├── astro.config.mjs       # Astro + Tailwind + Cloudflare config
+├── tsconfig.json          # TypeScript config (extends astro/tsconfigs/strict)
+├── public/                # Static assets (images, favicon)
+└── src/
+    ├── components/        # Astro components
+    ├── layouts/           # Page layouts
+    ├── pages/             # Route pages
+    └── styles/            # Global CSS with Tailwind
+```
+
+## Commands
+
+```bash
+npm run dev      # Start dev server (http://localhost:4321)
+npm run build    # Build for production
+npm run preview  # Preview production build
+```
+
+## Design System
+
+### CSS Variables (defined in `src/styles/global.css`)
+
+**Colors:**
+- `--color-bg`: #0a0a0f (base background)
+- `--color-bg-elevated`: #12121a
+- `--color-bg-card`: #1a1a24
+- `--color-surface`: #222230
+- `--color-border`: #2a2a3a
+- `--color-text`: #f0f0f5
+- `--color-text-muted`: #9090a0
+- `--color-text-subtle`: #606070
+- `--color-accent`: #a855f7 (purple)
+- `--color-accent-bright`: #c084fc
+- `--color-gold`: #fbbf24
+
+**Fonts:**
+- `--font-display`: Fraunces (headings)
+- `--font-mono`: JetBrains Mono (code/keys)
+- `--font-body`: Inter (body text)
+
+### Animation Classes
+
+- `.animate-fade-in` - Fade in with upward motion
+- `.animate-float` - Gentle floating effect
+- `.animate-pulse-glow` - Pulsing glow effect
+- `.animate-key-press` - Keyboard key press simulation
+- `.delay-100` to `.delay-800` - Stagger animation delays
+
+### Utility Classes
+
+- `.gradient-text` - Purple to gold gradient text
+- `.glow-accent` - Purple glow shadow
+- `.glow-gold` - Gold glow shadow
+
+## Components
+
+### KeyboardKey.astro
+Renders a styled keyboard key with optional description and animation.
+
+```astro
+<KeyboardKey label="Space" description="Play/Pause" size="lg" animate />
+```
+
+Props:
+- `label`: string - Key label text
+- `description?`: string - Text below the key
+- `wide?`: boolean - Extra horizontal padding
+- `animate?`: boolean - Enable press animation
+- `size?`: 'sm' | 'md' | 'lg' - Key size
+
+### FeatureCard.astro
+Card component for feature highlights.
+
+```astro
+<FeatureCard title="Title" description="Description" icon="🎯" />
+```
+
+### ServiceBadge.astro
+Displays a supported service with its feature list.
+
+```astro
+<ServiceBadge name="Disney+" color="#113ccf" features={['Feature 1', 'Feature 2']} />
+```
+
+### RestoreDialog.astro
+Visual demo of the position restore dialog UI. No props required.
+
+## Tailwind v4 Notes
+
+This project uses Tailwind CSS v4 with the Vite plugin:
+- No `tailwind.config.js` needed - uses CSS-first configuration
+- Theme customization via `@theme` directive in `global.css`
+- Import with `@import "tailwindcss"` in CSS files
+
+## Cloudflare Pages Deployment
+
+Build settings:
+- **Build command**: `npm run build`
+- **Output directory**: `dist`
+- **Node.js version**: 25.x (matches `.node-version`)
+
+The `@astrojs/cloudflare` adapter is configured for static output.
+
+## Best Practices
+
+1. **Components**: Keep components in `src/components/`, use `.astro` extension
+2. **Styling**: Use Tailwind utilities, fall back to CSS variables for consistency
+3. **Images**: Place in `public/images/`, reference with `/images/...`
+4. **Animations**: Prefer CSS animations over JavaScript for performance
+5. **Accessibility**: Include proper ARIA labels and semantic HTML

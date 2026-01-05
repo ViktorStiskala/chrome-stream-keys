@@ -1,0 +1,56 @@
+---
+interface Props {
+  label: string;
+  description?: string;
+  wide?: boolean;
+  animate?: boolean;
+  size?: 'sm' | 'md' | 'lg';
+}
+
+const { label, description, wide = false, animate = false, size = 'md' } = Astro.props;
+
+const sizeClasses = {
+  sm: 'min-w-[40px] h-[40px] text-sm',
+  md: 'min-w-[56px] h-[56px] text-base',
+  lg: 'min-w-[72px] h-[72px] text-lg',
+};
+
+const wideClass = wide ? 'px-6' : 'px-3';
+---
+
+<div class="flex flex-col items-center gap-2">
+  <div
+    class:list={[
+      'keyboard-key',
+      'relative inline-flex items-center justify-center rounded-lg',
+      'bg-gradient-to-b from-[var(--color-key-bg)] to-[#151520]',
+      'border border-[var(--color-key-border)]',
+      'font-mono font-semibold text-[var(--color-text)]',
+      'transition-all duration-150',
+      'hover:border-[var(--color-accent)] hover:text-[var(--color-accent-bright)]',
+      sizeClasses[size],
+      wideClass,
+      animate && 'animate-key-press',
+    ]}
+    style="box-shadow: 0 4px 0 var(--color-key-shadow), 0 6px 20px rgba(0, 0, 0, 0.3);"
+  >
+    <span class="relative z-10">{label}</span>
+    <!-- Key shine effect -->
+    <div class="absolute inset-0 rounded-lg bg-gradient-to-b from-white/5 to-transparent pointer-events-none"></div>
+  </div>
+  {description && (
+    <span class="text-sm text-[var(--color-text-muted)] text-center">{description}</span>
+  )}
+</div>
+
+<style>
+  .keyboard-key:hover {
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 var(--color-key-shadow), 0 4px 15px rgba(0, 0, 0, 0.2);
+  }
+  
+  .keyboard-key:active {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 var(--color-key-shadow), 0 2px 10px rgba(0, 0, 0, 0.2);
+  }
+</style>
