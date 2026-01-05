@@ -13,7 +13,7 @@ Check all Cursor rules in the codebase to verify they are up-to-date with the cu
 Find all rule files in the codebase:
 
 ```bash
-find . -path '**/.cursor/rules/**/*.md' -type f 2>/dev/null
+find . -path '**/.cursor/rules/**/*.mdc' -type f 2>/dev/null
 ```
 
 Read each discovered rule file.
@@ -21,9 +21,9 @@ Read each discovered rule file.
 ### Step 2: Categorize Rules
 
 Group discovered rules by type:
-- **General rules**: `.cursor/rules/*/RULE.md` (project-wide patterns)
-- **Service-specific rules**: `src/services/.cursor/rules/*/RULE.md` (per-service docs)
-- **Feature-specific rules**: `src/features/*/.cursor/rules/*/RULE.md` (per-feature docs)
+- **General rules**: `.cursor/rules/*.mdc` (project-wide patterns)
+- **Service-specific rules**: `src/services/.cursor/rules/*.mdc` (per-service docs)
+- **Feature-specific rules**: `src/features/*/.cursor/rules/*.mdc` (per-feature docs)
 
 ### Step 3: For Each Rule, Verify Against Implementation
 
@@ -80,4 +80,4 @@ Present findings in this format:
 
 If updates are needed:
 1. Present the specific changes required
-2. Wait for explicit user confirmation before modifying any RULE.md files
+2. Wait for explicit user confirmation before modifying any .mdc rule files

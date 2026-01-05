@@ -1,5 +1,10 @@
 ---
 description: Testing patterns and conventions for StreamKeys extension using Vitest. Apply this rule when writing new tests, running npm test or npm run test:watch, working with DOM fixtures in resources/dom/, debugging test failures, or understanding the test infrastructure. Covers: co-located test files (*.test.ts next to source), the _test object pattern for exposing internals, fixture setup helpers (loadDOMFixture), and testing constants. Essential when creating tests in src/, modifying vitest.config.ts or vitest.setup.ts, or adding service-specific test files. Relevant keywords: test, vitest, spec, assertion, fixture, mock, DOM testing, test:watch, npm test.
+globs:
+  - "**/*.test.ts"
+  - "**/vitest.*.ts"
+  - "resources/dom/**"
+alwaysApply: false
 ---
 
 # Testing
@@ -74,13 +79,23 @@ This helper creates the full nested shadow DOM structure that BBC iPlayer uses, 
 
 Services export a `_test` object with internal functions for testing:
 
-@scripts/service-test-pattern.ts
+Export `_test` object with internal functions for testing (e.g., `getPlayer`, `getVideo`, `subtitles`).
+
+See `.cursor/rules/scripts/testing/service-test-pattern.ts` for the template.
 
 ## Testing Constants
 
 When testing with threshold values, import and use the exported constants instead of hardcoding:
 
-@scripts/testing-constants.ts
+Import threshold constants from source (`SEEK_MIN_DIFF_SECONDS`, etc.) instead of hardcoding in tests.
+
+See `.cursor/rules/scripts/testing/testing-constants.ts` for the template.
+
+## Fixture Setup Pattern
+
+Test setup pattern: `resetFixture()` + `loadFixture('service')` in `beforeEach`.
+
+See `.cursor/rules/scripts/testing/fixture-setup.ts` for the template.
 
 ## Writing New Tests
 

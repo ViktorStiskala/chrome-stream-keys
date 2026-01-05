@@ -4,7 +4,10 @@ interface Props {
   description?: string;
 }
 
-const { title, description = "YouTube-style keyboard shortcuts for streaming services. Fixes broken spacebar behavior, adds quick subtitle toggling, and lets you jump back to previous positions." } = Astro.props;
+const {
+  title,
+  description = "YouTube-style keyboard shortcuts for streaming services. Fixes broken spacebar behavior, adds quick subtitle toggling, and lets you jump back to previous positions.",
+} = Astro.props;
 ---
 
 <!doctype html>
@@ -13,19 +16,19 @@ const { title, description = "YouTube-style keyboard shortcuts for streaming ser
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
-    
+
     <!-- Open Graph -->
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="/images/hero_banner.png" />
-    
+
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content="/images/hero_banner.png" />
-    
+
     <link rel="icon" type="image/png" href="/favicon.png" />
     <title>{title}</title>
   </head>
@@ -35,5 +38,5 @@ const { title, description = "YouTube-style keyboard shortcuts for streaming ser
 </html>
 
 <style is:global>
-  @import '../styles/global.css';
+  @import "../styles/global.css";
 </style>

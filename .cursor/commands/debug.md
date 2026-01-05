@@ -29,9 +29,9 @@ The log shows which streaming provider is being used. Look for:
 - `[StreamKeys] <Provider> extension loaded` message
 
 **When you identify the provider, add the following to context:**
-- Provider-specific rules: `src/services/.cursor/rules/<provider>/RULE.md` (e.g., `src/services/.cursor/rules/disney/RULE.md` for Disney+)
+- Provider-specific rules: `src/services/.cursor/rules/<provider>.mdc` (e.g., `src/services/.cursor/rules/disney.mdc` for Disney+)
 - Service handler file: `src/services/<provider>.ts`
-- Handler configuration patterns: `.cursor/rules/handlers/RULE.md`
+- Handler configuration patterns: `.cursor/rules/handlers.mdc`
 
 ### Settings
 

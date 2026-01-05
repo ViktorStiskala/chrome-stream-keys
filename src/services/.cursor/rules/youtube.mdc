@@ -4,6 +4,7 @@ globs:
   - "**/youtube.ts"
   - "**/services/youtube*"
   - "resources/dom/youtube*"
+alwaysApply: false
 ---
 
 # YouTube Handler Notes

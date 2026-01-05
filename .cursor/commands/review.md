@@ -13,7 +13,7 @@ Perform a comprehensive code review of the StreamKeys extension, focusing on bug
 Dynamically find and read ALL cursor rules in the codebase:
 
 ```bash
-find . -path '**/.cursor/rules/**/*.md' -type f 2>/dev/null
+find . -path '**/.cursor/rules/**/*.mdc' -type f 2>/dev/null
 ```
 
 Read each discovered rule file to understand project conventions and requirements. This ensures any new rules added in nested directories (e.g., `src/features/restore-position/.cursor/rules/`) are automatically included.
@@ -147,7 +147,7 @@ Compare implemented features against documentation:
 - Installation instructions are up to date
 - The README is meant mostly for end-users, so technical details shouldn't be mentioned apart from simple developer instructions
 
-**All discovered RULE.md files:**
+**All discovered .mdc rule files:**
 - Feature flags documented match actual implementation
 - Config properties match type definitions
 - DOM selectors match actual service implementations
@@ -191,7 +191,7 @@ If documentation drift is found:
 
 1. **STOP and ask the user** before making any changes to:
    - `README.md`
-   - Any `RULE.md` files
+   - Any `.mdc` rule files
    - Other documentation
 
 2. Present the specific mismatches found:

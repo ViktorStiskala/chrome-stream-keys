@@ -5,6 +5,7 @@ globs:
   - "**/services/bbc*"
   - "**/handlers/bbc*"
   - "resources/dom/bbc*"
+alwaysApply: false
 ---
 
 # BBC iPlayer Handler Notes

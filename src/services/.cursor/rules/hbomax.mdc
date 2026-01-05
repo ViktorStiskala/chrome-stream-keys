@@ -5,6 +5,7 @@ globs:
   - "**/services/hbomax*"
   - "**/handlers/hbomax*"
   - "resources/dom/hbomax*"
+alwaysApply: false
 ---
 
 # HBO Max Handler Notes

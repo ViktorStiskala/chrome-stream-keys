@@ -1,5 +1,9 @@
 ---
 description: Debug logging system and console forwarding for StreamKeys extension development. Apply this rule when debugging runtime issues, tracing execution flow, reading .cursor/debug.log output, working with the Debug module (src/core/debug.ts), adding or reviewing console.log/console.warn/console.error statements, or troubleshooting timing and state problems. Essential when: user reports browser runtime issues, adding Debug.log/Debug.action/Debug.event calls, implementing Debug.initConsoleForward() in service handlers, wrapping code in if (__DEV__) blocks, or understanding why console output isn't appearing. Relevant keywords: debug, logging, console, trace, runtime error, dev server, __DEV__.
+globs:
+  - "**/debug.ts"
+  - "**/core/debug*"
+alwaysApply: false
 ---
 
 # Debug Logging
@@ -39,7 +43,9 @@ This file contains all `console.log/warn/error` output from the extension runnin
 
 **All service handlers in `src/services/` MUST initialize console forwarding at the top of the file:**
 
-@scripts/console-forwarding.ts
+Initialize console forwarding in dev mode - call `Debug.initConsoleForward()` inside `if (__DEV__)` block.
+
+See `.cursor/rules/scripts/debugging/console-forwarding.ts` for the template.
 
 This forwards all `console.log/warn/error` from the page context to the Vite dev server, which writes them to `.cursor/debug.log`. Without this, browser console logs won't appear in the debug log file.
 
@@ -83,7 +89,9 @@ This ensures:
 
 **Even though Debug is a no-op in production, wrapping calls in `if (__DEV__)` is still recommended:**
 
-@scripts/debug-usage.ts
+Shows recommended `if (__DEV__)` wrapping pattern vs direct calls, and when to avoid argument evaluation.
+
+See `.cursor/rules/scripts/debugging/debug-usage.ts` for the template.
 
 **Why wrap even with no-op stubs?**
 1. **Argument evaluation** - `Debug.log(expensiveComputation())` still evaluates the argument

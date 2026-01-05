@@ -6,8 +6,13 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
+    "typecheck": "tsc --noEmit",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
+    "lint:classes": "! grep -rn --include='*.astro' --include='*.ts' -E '(flex-shrink|flex-grow|overflow-ellipsis|overflow-clip)' src || (echo 'Error: Use canonical class names (shrink, grow, text-ellipsis, text-clip)' && exit 1)",
+    "format": "prettier --write \"src/**/*.{ts,astro,css}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,astro,css}\"",
+    "check": "npm run typecheck && npm run lint && npm run lint:classes && npm run format:check",
     "astro": "astro"
   },
   "dependencies": {
@@ -21,9 +26,13 @@
     "@types/node": "^22.10.0",
     "@typescript-eslint/parser": "^8.52.0",
     "eslint": "^9.39.2",
+    "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-astro": "^1.5.0",
     "eslint-plugin-tailwind-canonical-classes": "^1.1.0",
+    "prettier": "^3.4.2",
+    "prettier-plugin-astro": "^0.14.1",
     "tailwindcss": "^4.1.8",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.52.0"
   }
 }

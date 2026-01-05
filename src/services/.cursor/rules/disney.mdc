@@ -5,6 +5,7 @@ globs:
   - "**/services/disney*"
   - "**/handlers/disney*"
   - "resources/dom/disney*"
+alwaysApply: false
 ---
 
 # Disney+ Handler Notes

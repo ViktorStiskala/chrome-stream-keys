@@ -3,6 +3,7 @@ description: Position Restore Feature - Testing Guidelines
 globs:
   - "**/restore-position/**/*.test.ts"
   - "**/restore-position/**/test-utils.ts"
+alwaysApply: false
 ---
 
 # Position Restore Testing

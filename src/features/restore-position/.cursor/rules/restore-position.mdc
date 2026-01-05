@@ -3,6 +3,7 @@ description: Position Restore Feature - History and Dialog
 globs:
   - "**/restore-position/**/*.ts"
   - "!**/*.test.ts"
+alwaysApply: false
 ---
 
 # Position Restore Feature

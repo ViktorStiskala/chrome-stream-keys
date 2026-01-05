@@ -2,6 +2,7 @@
 description: Core Browser APIs and Event Handling
 globs:
   - "**/core/**/*.ts"
+alwaysApply: false
 ---
 
 # Core Module Notes

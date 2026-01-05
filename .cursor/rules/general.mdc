@@ -14,10 +14,10 @@ information, and crucial rules for new code.
 ### Service-specific Rules
 
 When the prompt mentions a specific streaming provider, **always load the corresponding rules**:
-- **Disney+, Disney Plus, Disney** → `src/services/.cursor/rules/disney/RULE.md`
-- **HBO Max, HBO, Max** → `src/services/.cursor/rules/hbomax/RULE.md`
-- **YouTube** → `src/services/.cursor/rules/youtube/RULE.md`
-- **BBC, BBC iPlayer, iPlayer** → `src/services/.cursor/rules/bbc/RULE.md`
+- **Disney+, Disney Plus, Disney** → `src/services/.cursor/rules/disney.mdc`
+- **HBO Max, HBO, Max** → `src/services/.cursor/rules/hbomax.mdc`
+- **YouTube** → `src/services/.cursor/rules/youtube.mdc`
+- **BBC, BBC iPlayer, iPlayer** → `src/services/.cursor/rules/bbc.mdc`
 
 These rules contain critical DOM selectors, Shadow DOM access patterns, and service-specific quirks that must be followed.
 
