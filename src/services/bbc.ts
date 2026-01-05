@@ -48,6 +48,7 @@ function getNestedShadow(root: Document | ShadowRoot, ...selectors: string[]): S
  * During trailers, the progress bar shows main video time but we're watching trailer content.
  */
 function isTrailerPlaying(): boolean {
+  if (typeof document === 'undefined') return false;
   return document.querySelector('.skip-trailer') !== null;
 }
 
