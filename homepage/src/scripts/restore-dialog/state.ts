@@ -1,7 +1,12 @@
 // Restore Dialog State Management
 
 import type { Position } from "./types";
-import { initialPositions, INITIAL_VIDEO_SECONDS } from "./config";
+import {
+  initialPositions,
+  INITIAL_VIDEO_SECONDS,
+  getRandomVideoSeconds,
+  formatTimeForConfig,
+} from "./config";
 
 // ============================================================================
 // State
@@ -106,9 +111,17 @@ export function findSimilarPositionIndex(
 // ============================================================================
 
 export function resetState(): void {
-  // Keep only load time position
-  const loadTimePos = positions.find((p) => p.isLoadTime);
-  positions = loadTimePos ? [loadTimePos] : [];
+  // Generate new random time
+  currentVideoSeconds = getRandomVideoSeconds();
+
+  // Keep only load time position, updated with new time
+  positions = [
+    {
+      time: formatTimeForConfig(currentVideoSeconds),
+      timeSeconds: currentVideoSeconds,
+      label: "load time",
+      isLoadTime: true,
+    },
+  ];
   userSavedPosition = null;
-  currentVideoSeconds = INITIAL_VIDEO_SECONDS;
 }

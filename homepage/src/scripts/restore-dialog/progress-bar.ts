@@ -1,6 +1,6 @@
 // Progress Bar with Drag Support, Hover Tooltip, and Reset
 
-import { DURATION_SECONDS } from "./config";
+import { DURATION_SECONDS, VIDEOS } from "./config";
 import { formatTime, getProgressPercent } from "./time";
 import { EVENTS, dispatchTimeUpdate } from "./events";
 import {
@@ -10,6 +10,22 @@ import {
   getIsDialogOpen,
 } from "./state";
 import { savePositionFromProgressBar, renderPositions } from "./positions";
+
+// ============================================================================
+// Random Video Selection
+// ============================================================================
+
+function setRandomVideo(): void {
+  const titleEl = document.getElementById("video-title");
+  const subtitleEl = document.getElementById("video-subtitle");
+  if (!titleEl || !subtitleEl) return;
+
+  const randomIndex = Math.floor(Math.random() * VIDEOS.length);
+  const video = VIDEOS[randomIndex];
+
+  titleEl.textContent = video.title;
+  subtitleEl.textContent = video.subtitle;
+}
 
 // ============================================================================
 // State
@@ -27,7 +43,6 @@ interface ProgressBarElements {
   scrubber: HTMLElement | null;
   tooltip: HTMLElement | null;
   timeRemaining: HTMLElement | null;
-  timeCurrent: HTMLElement | null;
 }
 
 function getProgressBarElements(): ProgressBarElements | null {
@@ -40,7 +55,6 @@ function getProgressBarElements(): ProgressBarElements | null {
     scrubber: document.getElementById("video-progress-scrubber"),
     tooltip: document.getElementById("video-progress-tooltip"),
     timeRemaining: document.getElementById("video-time-remaining"),
-    timeCurrent: document.getElementById("video-time-current"),
   };
 }
 
@@ -66,9 +80,6 @@ function updateProgressBarUI(
   if (elements.timeRemaining) {
     const remaining = DURATION_SECONDS - currentTime;
     elements.timeRemaining.textContent = `-${formatTime(remaining)}`;
-  }
-  if (elements.timeCurrent) {
-    elements.timeCurrent.textContent = formatTime(currentTime);
   }
 }
 
@@ -175,9 +186,6 @@ function handleDragMove(
     elements.tooltip.style.left = `${percent}%`;
     elements.tooltip.style.opacity = "1";
   }
-  if (elements.timeCurrent) {
-    elements.timeCurrent.textContent = formatTime(timeAtPosition);
-  }
   if (elements.timeRemaining) {
     const remaining = DURATION_SECONDS - timeAtPosition;
     elements.timeRemaining.textContent = `-${formatTime(remaining)}`;
@@ -236,6 +244,9 @@ function handleReset(elements: ProgressBarElements): void {
   // Reset state (clears all positions except load time)
   resetState();
 
+  // Pick a new random video
+  setRandomVideo();
+
   // Update progress bar UI directly (without dispatching events that save to history)
   updateProgressBarUI(elements);
 
@@ -255,6 +266,9 @@ export function initProgressBar(): void {
 
   // Store pre-seek time for drag operations
   let preSeekTimeForDrag = getCurrentVideoSeconds();
+
+  // Pick a random video on load
+  setRandomVideo();
 
   // Initial update
   updateProgressBarUI(elements);

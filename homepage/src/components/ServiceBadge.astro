@@ -1,11 +1,14 @@
 ---
+import { Icon } from "astro-icon/components";
+
 interface Props {
   name: string;
   color: string;
+  icon: string;
   features: string[];
 }
 
-const { name, color, features } = Astro.props;
+const { name, color, icon, features } = Astro.props;
 ---
 
 <div
@@ -13,8 +16,7 @@ const { name, color, features } = Astro.props;
   style={`--service-color: ${color};`}
 >
   <div class="flex items-center gap-3 mb-4">
-    <div class="w-3 h-3 rounded-full" style={`background-color: ${color};`}>
-    </div>
+    <Icon name={icon} class="w-6 h-6" />
     <h3 class="font-semibold text-text">{name}</h3>
   </div>
 

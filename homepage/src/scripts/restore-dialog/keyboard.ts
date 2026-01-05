@@ -59,9 +59,31 @@ function handleKeydown(e: KeyboardEvent): void {
 }
 
 // ============================================================================
+// Demo Key Click Handlers
+// ============================================================================
+
+function initDemoKeys(): void {
+  const keyR = document.getElementById("demo-key-r");
+  const keyS = document.getElementById("demo-key-s");
+
+  if (keyR) {
+    keyR.addEventListener("click", () => {
+      toggleDialog();
+    });
+  }
+
+  if (keyS) {
+    keyS.addEventListener("click", () => {
+      saveCurrentPosition();
+    });
+  }
+}
+
+// ============================================================================
 // Initialization
 // ============================================================================
 
 export function initKeyboard(): void {
   document.addEventListener("keydown", handleKeydown);
+  initDemoKeys();
 }
