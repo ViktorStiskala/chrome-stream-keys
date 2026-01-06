@@ -26,6 +26,7 @@
   "devDependencies": {
     "@astrojs/check": "^0.9.6",
     "@eslint/js": "^9.39.2",
+    "@hyoban/eslint-plugin-tailwindcss": "^4.0.0-alpha.13",
     "@iconify-json/heroicons": "^1.2.3",
     "@iconify-json/material-symbols": "^1.2.50",
     "@iconify-json/streamline-logos": "^1.2.0",

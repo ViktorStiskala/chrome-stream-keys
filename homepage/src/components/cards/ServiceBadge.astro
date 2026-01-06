@@ -12,11 +12,11 @@ const { name, color, icon, features } = Astro.props;
 ---
 
 <div
-  class="service-badge p-5 rounded-xl bg-bg-card border border-border transition-all duration-300 hover:border-opacity-50"
+  class="service-badge rounded-xl border border-border bg-bg-card p-5 transition-all duration-300"
   style={`--service-color: ${color};`}
 >
-  <div class="flex items-center gap-3 mb-4">
-    <Icon name={icon} class="w-6 h-6" />
+  <div class="mb-4 flex items-center gap-3">
+    <Icon name={icon} class="h-6 w-6" />
     <h3 class="font-semibold text-text">{name}</h3>
   </div>
 
@@ -25,7 +25,7 @@ const { name, color, icon, features } = Astro.props;
       features.map((feature) => (
         <li class="flex items-center gap-2 text-sm text-text-muted">
           <svg
-            class="w-4 h-4 text-accent"
+            class="h-4 w-4 text-accent"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"

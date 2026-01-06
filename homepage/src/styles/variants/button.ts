@@ -3,15 +3,15 @@ import { tv, type VariantProps } from "tailwind-variants";
 export const button = tv({
   base: [
     "inline-flex items-center justify-center gap-2",
-    "font-semibold rounded-xl",
+    "rounded-xl font-semibold",
     "transition-all duration-200",
   ],
   variants: {
     variant: {
       primary:
-        "bg-accent hover:bg-accent-bright text-white hover:scale-105 glow-accent",
+        "glow-accent bg-accent text-white hover:scale-105 hover:bg-accent-bright",
       secondary:
-        "bg-surface hover:bg-bg-card text-text border border-border hover:border-accent/50",
+        "border border-border bg-surface text-text hover:border-accent/50 hover:bg-bg-card",
       ghost: "text-text-muted hover:text-text",
     },
     size: {

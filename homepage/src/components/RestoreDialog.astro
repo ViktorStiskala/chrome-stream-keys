@@ -5,19 +5,19 @@ import InlineKey from "./keyboard/InlineKey.astro";
 ---
 
 <div
-  class="restore-dialog-demo w-full max-w-md select-none relative min-h-[540px] flex items-center justify-center"
+  class="restore-dialog-demo relative flex min-h-[540px] w-full max-w-md items-center justify-center select-none"
 >
   <!-- Dialog container (can be hidden/shown) -->
   <div
     id="restore-dialog"
-    class="w-full bg-bg-card border border-border rounded-2xl p-6 shadow-2xl transition-opacity duration-200"
+    class="w-full rounded-2xl border border-border bg-bg-card p-6 shadow-2xl transition-opacity duration-200"
   >
     <!-- Header -->
-    <div class="flex items-center justify-between mb-4">
+    <div class="mb-4 flex items-center justify-between">
       <span class="text-xl font-semibold text-text">Restore Position</span>
       <button
         id="dialog-close-btn"
-        class="text-text-muted hover:text-text text-2xl leading-none transition-colors cursor-pointer"
+        class="cursor-pointer text-2xl leading-none text-text-muted transition-colors hover:text-text"
         aria-label="Close dialog"
       >
         ×
@@ -26,12 +26,12 @@ import InlineKey from "./keyboard/InlineKey.astro";
 
     <!-- Current time container -->
     <div
-      class="flex items-center justify-between px-4 py-3 bg-white/5 border border-border rounded-lg mb-2"
+      class="mb-2 flex items-center justify-between rounded-lg border border-border bg-white/5 px-4 py-3"
     >
       <span class="text-sm text-text-muted">Current time</span>
       <span
         id="dialog-current-time"
-        class="text-base font-semibold font-mono tabular-nums text-text"
+        class="font-mono text-base font-semibold text-text tabular-nums"
         >14:32</span
       >
     </div>
@@ -42,7 +42,7 @@ import InlineKey from "./keyboard/InlineKey.astro";
     </div>
 
     <!-- Hint text -->
-    <div id="hint-text" class="text-xs text-text-muted text-center mt-4">
+    <div id="hint-text" class="mt-4 text-center text-xs text-text-muted">
       Press 0-3 to select, Esc or R to close
     </div>
   </div>
@@ -50,10 +50,10 @@ import InlineKey from "./keyboard/InlineKey.astro";
   <!-- Hint shown when dialog is closed -->
   <div
     id="dialog-closed-hint"
-    class="absolute hidden items-center justify-center gap-3 px-8 py-6 bg-bg-card/50 border border-border/50 rounded-2xl text-text-muted transition-opacity duration-200"
+    class="absolute hidden items-center justify-center gap-3 rounded-2xl border border-border/50 bg-bg-card/50 px-8 py-6 text-text-muted transition-opacity duration-200"
   >
     <span>Press</span>
-    <InlineKey action="r" class="min-w-[32px] h-8 px-2 text-sm rounded-lg"
+    <InlineKey action="r" class="h-8 min-w-[32px] rounded-lg px-2 text-sm"
       >R</InlineKey
     >
     <span>to open restore dialog</span>

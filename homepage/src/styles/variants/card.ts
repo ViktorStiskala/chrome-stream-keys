@@ -2,8 +2,8 @@ import { tv, type VariantProps } from "tailwind-variants";
 
 export const card = tv({
   slots: {
-    root: "bg-bg-card border border-border transition-all duration-300",
-    glow: "absolute inset-0 pointer-events-none opacity-0 transition-opacity duration-300",
+    root: "border border-border bg-bg-card transition-all duration-300",
+    glow: "pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300",
     content: "relative z-10",
   },
   variants: {

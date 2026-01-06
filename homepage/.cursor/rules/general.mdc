@@ -20,6 +20,7 @@ This is the marketing homepage for the Stream Keys browser extension. Built with
 ```
 /homepage
 ├── astro.config.mjs       # Astro + Tailwind + Cloudflare + Icon config
+├── eslint.config.js       # ESLint flat config with Tailwind plugin
 ├── tsconfig.json          # TypeScript config (extends astro/tsconfigs/strict)
 ├── public/                # Static assets (images, favicon)
 └── src/
@@ -35,8 +36,7 @@ This is the marketing homepage for the Stream Keys browser extension. Built with
     │   └── restore-dialog/  # Interactive demo modules
     └── styles/
         ├── variants/      # Tailwind Variants definitions
-        ├── global.css     # Global styles and theme
-        └── keyboard-key.css # Key animation styles
+        └── global.css     # Global styles, theme, and Tailwind config
 ```
 
 See `components.mdc` rule for detailed component documentation.
@@ -213,6 +213,52 @@ When colors/fonts are defined in `@theme`, Tailwind generates native utility cla
 | `overflow-clip`                         | `text-clip`        |
 
 The linter (`npm run lint`) warns about non-canonical classes. Additionally, `npm run lint:classes` checks for deprecated Tailwind v3 class names.
+
+### Tailwind ESLint Plugin
+
+This project uses `@hyoban/eslint-plugin-tailwindcss@alpha` (v4.0.0-alpha.x), a fork with Tailwind v4 support.
+
+**Features:**
+- `classnames-order` - Auto-sorts Tailwind classes consistently (auto-fixable with `--fix`)
+- `no-custom-classname` - Warns about non-Tailwind classes (requires whitelist)
+- `no-contradicting-classname` - Catches conflicts like `p-2 p-4`
+- `enforces-shorthand` - Promotes shorthand utilities
+
+**Known quirks (alpha version):**
+- Requires **absolute path** to CSS config file (relative paths fail with worker resolution)
+- Template interpolations like `delay-${i * 100}` are parsed as `delay-` (incomplete class)
+
+**Configuration in `eslint.config.js`:**
+```javascript
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// In settings:
+settings: {
+  tailwindcss: {
+    config: path.join(__dirname, 'src/styles/global.css'), // MUST be absolute
+    whitelist: [
+      'restore-dialog-.*',    // JS DOM targeting
+      'service-badge',        // CSS variable scoping
+      'keyboard-key(-.+)?',   // JS-toggled animation states
+      'glow-accent',          // Custom effect in global.css
+      'delay-(\\d+)?',        // Dynamic delay from template interpolation
+    ],
+  },
+}
+```
+
+**When to add to whitelist:**
+1. **JS-toggled classes** - Classes added/removed by JavaScript (e.g., `--thumping`, `--flying`)
+2. **CSS variable scoping** - Classes that set CSS custom properties for child styling
+3. **DOM targeting** - Classes used only for `querySelector()` / `getElementById()`
+4. **Template interpolation** - Dynamic class patterns that ESLint can't evaluate statically
+
+**Adding new whitelist entries:**
+- Patterns are regex - use `\\d+` for digits, `.*` for any chars, `(-.+)?` for optional suffixes
+- Test with `npm run lint` to verify the pattern matches
 
 ## Cloudflare Pages Deployment
 
