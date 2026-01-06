@@ -6,7 +6,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "astro check && tsc --noEmit",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
     "lint:classes": "! grep -rn --include='*.astro' --include='*.ts' -E '(flex-shrink|flex-grow|overflow-ellipsis|overflow-clip)' src || (echo 'Error: Use canonical class names (shrink, grow, text-ellipsis, text-clip)' && exit 1)",
@@ -24,6 +24,7 @@
     "tailwind-variants": "^3.2.2"
   },
   "devDependencies": {
+    "@astrojs/check": "^0.9.6",
     "@eslint/js": "^9.39.2",
     "@iconify-json/heroicons": "^1.2.3",
     "@iconify-json/material-symbols": "^1.2.50",

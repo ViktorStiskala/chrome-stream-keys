@@ -1,4 +1,4 @@
-import { tv } from "tailwind-variants";
+import { tv, type VariantProps } from "tailwind-variants";
 
 export const key = tv({
   slots: {
@@ -40,4 +40,4 @@ export const key = tv({
   },
 });
 
-export type KeyVariants = Parameters<typeof key>[0];
+export type KeyVariants = VariantProps<typeof key>;

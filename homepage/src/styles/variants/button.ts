@@ -1,4 +1,4 @@
-import { tv } from "tailwind-variants";
+import { tv, type VariantProps } from "tailwind-variants";
 
 export const button = tv({
   base: [
@@ -26,4 +26,4 @@ export const button = tv({
   },
 });
 
-export type ButtonVariants = Parameters<typeof button>[0];
+export type ButtonVariants = VariantProps<typeof button>;

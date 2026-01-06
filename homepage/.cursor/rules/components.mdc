@@ -100,6 +100,19 @@ import Button from "../primitives/Button.astro";
 
 Variants are defined in `src/styles/variants/` using `tailwind-variants`.
 
+### Exporting Variant Types
+
+Use `VariantProps` from `tailwind-variants` to export types that work with TypeScript's `extends`:
+
+```typescript
+import { tv, type VariantProps } from "tailwind-variants";
+
+export const button = tv({ /* ... */ });
+export type ButtonVariants = VariantProps<typeof button>;
+```
+
+**Important:** Do NOT use `Parameters<typeof variant>[0]` - it returns a complex union type that breaks `interface extends`.
+
 ### Using Variants Directly
 
 For specialized components that need direct variant access:

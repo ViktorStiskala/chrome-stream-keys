@@ -47,7 +47,7 @@ See `components.mdc` rule for detailed component documentation.
 npm run dev          # Start dev server (http://localhost:4321)
 npm run build        # Build for production
 npm run preview      # Preview production build
-npm run typecheck    # TypeScript type checking
+npm run typecheck    # TypeScript type checking (astro check + tsc --noEmit)
 npm run lint         # Check for linting errors
 npm run lint:fix     # Auto-fix linting errors
 npm run format       # Format code with Prettier
@@ -60,7 +60,7 @@ npm run check        # Run all checks (typecheck + lint + format:check)
 **After making changes to source files in `src/`, run checks before completing the task.**
 
 Run `npm run check` to verify:
-- TypeScript types are correct (`tsc --noEmit`)
+- TypeScript types are correct (`astro check` for `.astro` files + `tsc --noEmit` for `.ts` files)
 - ESLint rules pass
 - Tailwind CSS classes use canonical form (e.g., `text-text-muted` instead of `text-[var(--color-text-muted)]`)
 - No deprecated class names (e.g., `shrink-0` not `flex-shrink-0`)
