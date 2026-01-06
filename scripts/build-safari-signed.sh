@@ -84,7 +84,7 @@ echo "Step 2/$TOTAL_STEPS: Converting to Xcode project..."
 xcrun safari-web-extension-converter build/production/safari/extension \
     --project-location build/production/safari/xcode \
     --app-name 'Stream Keys' \
-    --bundle-identifier com.streamkeys.extension \
+    --bundle-identifier com.getstreamkeys.safari \
     --force \
     --no-prompt \
     --no-open

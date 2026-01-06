@@ -3,8 +3,8 @@ description: Apply when working on the restore position demo section in the home
 globs:
   - homepage/src/scripts/restore-dialog/**
   - homepage/src/components/RestoreDialog.astro
-  - homepage/src/components/ui/DemoKey.astro
-  - homepage/src/components/ui/InlineKey.astro
+  - homepage/src/components/keyboard/DemoKey.astro
+  - homepage/src/components/keyboard/InlineKey.astro
 ---
 
 # Interactive Demo (Restore Position)

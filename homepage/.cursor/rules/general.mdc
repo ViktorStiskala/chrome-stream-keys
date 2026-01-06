@@ -23,13 +23,23 @@ This is the marketing homepage for the Stream Keys browser extension. Built with
 ├── tsconfig.json          # TypeScript config (extends astro/tsconfigs/strict)
 ├── public/                # Static assets (images, favicon)
 └── src/
-    ├── components/        # Astro components
+    ├── components/
+    │   ├── primitives/    # Base building blocks (Card, Key, Button)
+    │   ├── cards/         # Card-like components
+    │   ├── keyboard/      # Keyboard key components
+    │   ├── RestoreDialog.astro
+    │   └── CheckItem.astro
     ├── layouts/           # Page layouts
     ├── pages/             # Route pages
     ├── scripts/           # Client-side TypeScript
     │   └── restore-dialog/  # Interactive demo modules
-    └── styles/            # Global CSS with Tailwind
+    └── styles/
+        ├── variants/      # Tailwind Variants definitions
+        ├── global.css     # Global styles and theme
+        └── keyboard-key.css # Key animation styles
 ```
+
+See `components.mdc` rule for detailed component documentation.
 
 ## Commands
 
@@ -103,49 +113,32 @@ Use `npm run lint:fix` and `npm run format` to auto-fix issues.
 
 ## Components
 
-### KeyboardKey.astro
-Renders a styled keyboard key with optional description and animation.
+The homepage uses a domain-based component organization with Tailwind Variants for type-safe styling. Components are organized into:
+
+- **primitives/** - Base building blocks (Card, Key, Button)
+- **cards/** - Card-like components (FeatureCard, BrowserCard, ServiceBadge)
+- **keyboard/** - Keyboard key components (KeyboardKey, InlineKey, DemoKey)
+
+See the `components.mdc` rule for detailed component documentation, props, and usage examples.
+
+### Quick Reference
 
 ```astro
-<KeyboardKey label="Space" description="Play/Pause" size="lg" animate />
-<KeyboardKey label="R" href="#restore" />  <!-- Clickable, scrolls to section -->
+// Primitives
+import Card from "../components/primitives/Card.astro";
+import Key from "../components/primitives/Key.astro";
+import Button from "../components/primitives/Button.astro";
+
+// Cards
+import FeatureCard from "../components/cards/FeatureCard.astro";
+import BrowserCard from "../components/cards/BrowserCard.astro";
+import ServiceBadge from "../components/cards/ServiceBadge.astro";
+
+// Keyboard
+import KeyboardKey from "../components/keyboard/KeyboardKey.astro";
+import InlineKey from "../components/keyboard/InlineKey.astro";
+import DemoKey from "../components/keyboard/DemoKey.astro";
 ```
-
-Props:
-- `label`: string - Key label text
-- `description?`: string - Text below the key
-- `wide?`: boolean - Extra horizontal padding
-- `animate?`: boolean - Enable press animation
-- `size?`: 'sm' | 'md' | 'lg' - Key size
-- `href?`: string - Makes key clickable, renders as `<a>` with `cursor-pointer`
-
-### FeatureCard.astro
-Card component for feature highlights.
-
-```astro
-<FeatureCard title="Title" description="Description" icon="🎯" />
-```
-
-### ServiceBadge.astro
-Displays a supported service with its feature list and icon.
-
-```astro
-<ServiceBadge 
-  name="Disney+" 
-  color="#113ccf" 
-  icon="streamline-logos:disney-plus-logo-block"
-  features={['Feature 1', 'Feature 2']} 
-/>
-```
-
-Props:
-- `name`: string - Service name
-- `color`: string - Brand color (used for hover glow)
-- `icon`: string - Iconify icon name
-- `features`: string[] - List of supported features
-
-### RestoreDialog.astro
-Visual demo of the position restore dialog UI. No props required. Loads client-side script from `src/scripts/restore-dialog/index.ts`.
 
 ## Interactive Demo (Restore Dialog)
 
@@ -233,7 +226,22 @@ The `@astrojs/cloudflare` adapter is configured for static output.
 ## Best Practices
 
 1. **Components**: Keep components in `src/components/`, use `.astro` extension
-2. **Styling**: Use Tailwind utilities, fall back to CSS variables for consistency
+2. **Styling**: Use Tailwind utilities and the variant system for consistency
 3. **Images**: Place in `public/images/`, reference with `/images/...`
 4. **Animations**: Prefer CSS animations over JavaScript for performance
 5. **Accessibility**: Include proper ARIA labels and semantic HTML
+
+## Cursor Rules Maintenance (Plan Mode)
+
+Homepage cursor rules are located in `homepage/.cursor/rules/`.
+
+**Hard Constraints:**
+
+1. **Rule Review in Plans**: When operating in plan mode, ALWAYS include a step to review and update all homepage cursor rules (`homepage/.cursor/rules/*.mdc`) at the end of the plan. This ensures documentation stays synchronized with implementation changes.
+
+2. **New Rule Consideration**: When in plan mode implementing complex functionality (new patterns, architectural changes, new integrations), the agent MUST:
+   - First assess whether a new cursor rule would benefit future development
+   - If benefits exist, describe the specific reasons (e.g., "This introduces a new state management pattern that future agents need to understand to avoid breaking changes")
+   - Propose a name for the rule (e.g., `components.mdc`, `state-management.mdc`)
+   - Then ask the user whether to add creating a new cursor rule to the plan
+   - Only ask when there are clear benefits - do not ask for simple changes

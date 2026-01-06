@@ -1,13 +1,14 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import KeyboardKey from "../components/KeyboardKey.astro";
-import FeatureCard from "../components/FeatureCard.astro";
-import ServiceBadge from "../components/ServiceBadge.astro";
+import KeyboardKey from "../components/keyboard/KeyboardKey.astro";
+import FeatureCard from "../components/cards/FeatureCard.astro";
+import ServiceBadge from "../components/cards/ServiceBadge.astro";
 import RestoreDialog from "../components/RestoreDialog.astro";
-import InlineKey from "../components/ui/InlineKey.astro";
-import CheckItem from "../components/ui/CheckItem.astro";
-import BrowserCard from "../components/ui/BrowserCard.astro";
-import DemoKey from "../components/ui/DemoKey.astro";
+import InlineKey from "../components/keyboard/InlineKey.astro";
+import CheckItem from "../components/CheckItem.astro";
+import BrowserCard from "../components/cards/BrowserCard.astro";
+import DemoKey from "../components/keyboard/DemoKey.astro";
+import Button from "../components/primitives/Button.astro";
 import { Icon } from "astro-icon/components";
 
 const links = {
@@ -176,17 +177,11 @@ const shortcuts = [
       <div
         class="animate-fade-in delay-500 flex flex-wrap justify-center gap-4"
       >
-        <a
-          href="#install"
-          class="inline-flex items-center gap-2 px-6 py-3 bg-accent hover:bg-accent-bright text-white font-semibold rounded-xl transition-all duration-200 hover:scale-105 glow-accent"
-        >
+        <Button as="a" href="#install" variant="primary">
           <Icon name="material-symbols:download-rounded" class="w-5 h-5" />
           Download
-        </a>
-        <a
-          href="#restore"
-          class="inline-flex items-center gap-2 px-6 py-3 bg-surface hover:bg-bg-card text-text font-semibold rounded-xl border border-border transition-all duration-200 hover:border-accent/50"
-        >
+        </Button>
+        <Button as="a" href="#restore" variant="secondary">
           Learn More
           <svg
             class="w-4 h-4"
@@ -200,7 +195,7 @@ const shortcuts = [
               stroke-width="2"
               d="M19 9l-7 7-7-7"></path>
           </svg>
-        </a>
+        </Button>
       </div>
 
       <!-- Browser badges -->
@@ -246,8 +241,8 @@ const shortcuts = [
             >R</InlineKey
           >
           to instantly jump back to where you were. Perfect for when you overshoot
-          a skip, your finger slips on the trackpad, or you want to rewatch that
-          line you didn't quite catch – then return exactly where you were.
+          a skip, your finger slips on the trackpad, or you want to rewatch that line
+          you didn't quite catch – then return exactly where you were.
         </p>
         <div
           class="inline-flex items-center gap-3 px-6 py-4 bg-accent/2 border border-accent/30 rounded-full text-base font-medium text-accent"
@@ -547,13 +542,10 @@ const shortcuts = [
 
       <!-- GitHub download -->
       <div class="flex justify-center mb-12">
-        <a
-          href={links.githubReleases}
-          class="inline-flex items-center gap-2 px-6 py-3 bg-surface hover:bg-bg-card text-text font-semibold rounded-xl border border-border transition-all duration-200 hover:border-accent/50"
-        >
+        <Button as="a" href={links.githubReleases} variant="secondary">
           <Icon name="streamline-logos:github-logo-2-solid" class="w-5 h-5" />
           Download from GitHub
-        </a>
+        </Button>
       </div>
     </div>
   </section>

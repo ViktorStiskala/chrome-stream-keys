@@ -4,17 +4,17 @@
  */
 
 function initInteractiveKeys(): void {
-  const keys = document.querySelectorAll<HTMLElement>('[data-interactive]');
+  const keys = document.querySelectorAll<HTMLElement>("[data-interactive]");
 
   keys.forEach((key) => {
-    key.style.cursor = 'pointer';
-    key.addEventListener('click', handleKeyClick);
+    key.style.cursor = "pointer";
+    key.addEventListener("click", handleKeyClick);
   });
 }
 
 function handleKeyClick(e: MouseEvent): void {
   const key = e.currentTarget as HTMLElement;
-  const wrapper = key.closest('.keyboard-key-wrapper');
+  const wrapper = key.closest(".keyboard-key-wrapper");
   if (!wrapper) return;
 
   // Determine click direction relative to key center (proportional)
@@ -26,27 +26,27 @@ function handleKeyClick(e: MouseEvent): void {
   const direction = -((clickX - centerX) / centerX);
 
   // Trigger thump animation
-  key.classList.remove('keyboard-key--thumping');
+  key.classList.remove("keyboard-key--thumping");
   // Force reflow to restart animation if clicked rapidly
   void key.offsetWidth;
-  key.classList.add('keyboard-key--thumping');
+  key.classList.add("keyboard-key--thumping");
 
   // Create flying clone
   const clone = key.cloneNode(true) as HTMLElement;
-  clone.removeAttribute('data-interactive');
-  clone.classList.remove('keyboard-key--thumping');
-  clone.classList.add('keyboard-key--flying');
+  clone.removeAttribute("data-interactive");
+  clone.classList.remove("keyboard-key--thumping");
+  clone.classList.add("keyboard-key--flying");
   // Set direction as CSS custom property
-  clone.style.setProperty('--fly-direction', String(direction));
+  clone.style.setProperty("--fly-direction", String(direction));
   wrapper.appendChild(clone);
 
   // Cleanup after animation
-  clone.addEventListener('animationend', () => clone.remove());
+  clone.addEventListener("animationend", () => clone.remove());
 }
 
 // Initialize on DOM ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initInteractiveKeys);
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initInteractiveKeys);
 } else {
   initInteractiveKeys();
 }
