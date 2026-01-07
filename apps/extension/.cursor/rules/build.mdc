@@ -87,3 +87,28 @@ Output directories:
 - Dev: `build/dev/{browser}/extension`
 - Prod: `build/production/{browser}/extension`
 - Safari DMG: `build/production/safari/stream-keys-safari.dmg`
+
+## Browser-Specific Manifest Transformations
+
+The `vite.config.ts` transforms the manifest for browser compatibility:
+
+### Background Script Format
+
+- **Chrome**: Uses `service_worker` (Manifest V3 standard)
+- **Firefox/Safari**: Uses `scripts` array (these browsers don't support service workers in extensions)
+
+```json
+// Chrome
+"background": { "service_worker": "src/background/index.js" }
+
+// Firefox & Safari
+"background": { "scripts": ["src/background/index.js"] }
+```
+
+### Main World Injection (Safari Compatibility)
+
+Safari doesn't support `world: "MAIN"` in:
+- `manifest.json` content_scripts
+- `browser.scripting.executeScript()`
+
+**Solution**: Use script tag injection instead. See the handlers.mdc rule for details on the shadow patcher loader pattern.

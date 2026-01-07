@@ -36,14 +36,23 @@ document
 
 BBC uses `attachShadow({ mode: 'closed' })` for some components. The shadow patcher (`src/shadow-patcher.ts`) must be injected at `document_start` to intercept and store shadow root references.
 
+**Safari Compatibility:** Safari doesn't support `world: "MAIN"`. The extension uses a loader pattern instead:
+1. `shadow-patcher-loader.ts` runs as a content script at `document_start`
+2. The loader injects `shadow-patcher.js` into the main world via a `<script>` tag
+
 Configuration in `manifest.json`:
 ```json
 "content_scripts": [
   {
     "matches": ["https://*.bbc.co.uk/*"],
-    "js": ["src/shadow-patcher.js"],
-    "run_at": "document_start",
-    "world": "MAIN"
+    "js": ["src/shadow-patcher-loader.js"],
+    "run_at": "document_start"
+  }
+],
+"web_accessible_resources": [
+  {
+    "resources": ["src/shadow-patcher.js"],
+    "matches": ["https://*.bbc.co.uk/*"]
   }
 ]
 ```

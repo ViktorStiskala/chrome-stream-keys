@@ -46,22 +46,32 @@ The shadow patcher (`src/shadow-patcher.ts`) intercepts `Element.prototype.attac
 
 **How it works:**
 
-1. Injected via content script at `document_start` (before page JS runs)
-2. Overrides `attachShadow()` to store shadow root references in a WeakMap
-3. Exposes `window.__getShadowRoot(element)` to retrieve stored references
+1. A loader script (`src/shadow-patcher-loader.ts`) runs at `document_start` in the isolated content script world
+2. The loader injects `shadow-patcher.js` into the main world via a `<script>` tag
+3. The patcher overrides `attachShadow()` to store shadow root references in a WeakMap
+4. Exposes `window.__getShadowRoot(element)` to retrieve stored references
 
-**Configuration:** Add to `manifest.json` content_scripts for services that need it:
+**Why this pattern:** Safari doesn't support `world: "MAIN"` in manifest content_scripts. Using a loader that injects via script tag works in all browsers (Chrome, Firefox, Safari).
+
+**Configuration:** Add to `manifest.json` for services that need the shadow patcher:
 
 ```json
 "content_scripts": [
   {
     "matches": ["https://*.example.com/*"],
-    "js": ["src/shadow-patcher.js"],
-    "run_at": "document_start",
-    "world": "MAIN"
+    "js": ["src/shadow-patcher-loader.js"],
+    "run_at": "document_start"
+  }
+],
+"web_accessible_resources": [
+  {
+    "resources": ["src/shadow-patcher.js"],
+    "matches": ["https://*.example.com/*"]
   }
 ]
 ```
+
+**Important:** The `shadow-patcher.js` must be in `web_accessible_resources` so the loader can reference it via `chrome.runtime.getURL()`.
 
 ### Accessing Shadow DOM in Handlers
 
