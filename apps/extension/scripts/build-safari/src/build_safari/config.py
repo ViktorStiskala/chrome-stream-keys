@@ -22,10 +22,15 @@ class DMGConfig:
     icon: Path
     background: Path
     icon_size: int
+    text_size: int
     window_position: tuple[int, int]
     window_size: tuple[int, int]
     app_position: tuple[int, int]
     applications_position: tuple[int, int]
+    show_pathbar: bool = False
+    show_status_bar: bool = False
+    show_sidebar: bool = False
+    show_toolbar: bool = False
 
 
 @dataclass(frozen=True)
@@ -116,10 +121,15 @@ class AppConfig:
                 icon=Path(dmg["icon"]),
                 background=Path(dmg["background"]),
                 icon_size=dmg["icon_size"],
+                text_size=dmg.get("text_size", 12),
                 window_position=tuple(dmg["window_position"]),
                 window_size=tuple(dmg["window_size"]),
                 app_position=tuple(dmg["app_position"]),
                 applications_position=tuple(dmg["applications_position"]),
+                show_pathbar=dmg.get("show_pathbar", False),
+                show_status_bar=dmg.get("show_status_bar", False),
+                show_sidebar=dmg.get("show_sidebar", False),
+                show_toolbar=dmg.get("show_toolbar", False),
             ),
         )
 

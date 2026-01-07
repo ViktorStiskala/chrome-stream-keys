@@ -3,7 +3,6 @@ description: Safari build tool - Python/Textual TUI for building Safari extensio
 globs:
   - apps/extension/scripts/build-safari/**/*.py
   - apps/extension/scripts/build-safari/pyproject.toml
-  - apps/extension/scripts/build-safari/dmg_settings.py
 ---
 
 # Safari Build Tool
@@ -16,10 +15,16 @@ Python-based build tool for creating Safari extension packages (DMG and App Stor
 
 2. **Reinstalling packages** - Use `uv sync --reinstall` to force reinstall, not `uv pip install --force-reinstall`.
 
-3. **Running the tool** - Always run from `apps/extension/` directory:
+3. **Running the tool** - Use `uv sync` to ensure dependencies (installs package as editable):
    ```bash
-   uv run --directory scripts/build-safari python -m build_safari [options]
+   cd scripts/build-safari && uv sync && uv run python -m build_safari [options]
    ```
+   Or use npm scripts from `apps/extension/`:
+   ```bash
+   npm run build:safari
+   ```
+   
+   Note: `uv sync` installs the package as **editable** by default, so code changes are picked up automatically. Use `--frozen` in CI for reproducibility.
 
 4. **Python 3.14+** - No backward compatibility. Use modern typing syntax (`list[str]` not `List[str]`, `X | None` not `Optional[X]`).
 
@@ -109,30 +114,48 @@ Options:
 ## Common Commands
 
 ```bash
-# Development - sync dependencies
+# Sync dependencies (from build-safari directory, installs as editable)
 cd apps/extension/scripts/build-safari && uv sync
 
-# Reinstall after code changes (if needed)
-cd apps/extension/scripts/build-safari && uv sync --reinstall
-
 # Build unsigned DMG (local testing)
-cd apps/extension && uv run --directory scripts/build-safari python -m build_safari --dmg
+cd apps/extension/scripts/build-safari && uv run python -m build_safari --dmg
 
 # Build signed + notarized DMG
-cd apps/extension && uv run --directory scripts/build-safari python -m build_safari --dmg --signed
+cd apps/extension/scripts/build-safari && uv run python -m build_safari --dmg --signed
 
 # Build App Store package
-cd apps/extension && uv run --directory scripts/build-safari python -m build_safari --appstore
+cd apps/extension/scripts/build-safari && uv run python -m build_safari --appstore
 
 # Simple mode (no TUI, for CI or debugging)
-cd apps/extension && uv run --directory scripts/build-safari python -m build_safari --dmg --simple
+cd apps/extension/scripts/build-safari && uv run python -m build_safari --dmg --simple
+
+# Or use npm scripts from apps/extension/ (includes uv sync)
+npm run build:safari
+npm run build:safari:signed
+npm run build:safari:appstore
 ```
 
 ## DMG Configuration
 
-DMG settings in `pyproject.toml` under `[tool.build-safari.dmg]`:
-- Icon positions use center coordinates (same as `appdmg`)
-- Settings file `dmg_settings.py` is passed to `dmgbuild` library
+DMG settings are defined in `pyproject.toml` under `[tool.build-safari.dmg]` and passed directly to `dmgbuild` library (no separate settings file):
+
+```toml
+[tool.build-safari.dmg]
+title = "Stream Keys"
+icon = "../../../../assets/StreamKeys.icns"
+background = "../../../../assets/dmg-background.png"
+icon_size = 175
+text_size = 12
+window_position = [200, 120]
+window_size = [660, 480]
+app_position = [151, 279]       # Icon center coordinates
+applications_position = [510, 274]
+# Finder window options
+show_pathbar = false
+show_status_bar = false
+show_sidebar = false
+show_toolbar = false
+```
 
 ## Adding New Build Steps
 

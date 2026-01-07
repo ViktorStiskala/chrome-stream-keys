@@ -128,7 +128,22 @@ class BuildLogger:
         """
         import re
 
-        ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+        # Comprehensive pattern for ANSI escape sequences:
+        # - CSI sequences: ESC [ ... (colors, cursor movement, etc.)
+        # - OSC sequences: ESC ] ... ST (operating system commands)
+        # - Other single-character sequences: ESC followed by single char
+        ansi_escape = re.compile(
+            r"\x1B"  # ESC character
+            r"(?:"
+            r"\[[0-9;]*[A-Za-z]"  # CSI sequences: ESC [ params letter
+            r"|"
+            r"\][^\x07\x1B]*(?:\x07|\x1B\\)"  # OSC sequences: ESC ] ... BEL or ST
+            r"|"
+            r"[PX^_][^\x1B]*\x1B\\"  # DCS, SOS, PM, APC sequences
+            r"|"
+            r"[@-Z\\-_]"  # Single character sequences
+            r")"
+        )
         return ansi_escape.sub("", text)
 
     def __enter__(self) -> "BuildLogger":

@@ -40,7 +40,13 @@ title = "Stream Keys"
 icon = "../../../../assets/StreamKeys.icns"
 background = "../../../../assets/dmg-background.png"
 icon_size = 175
+text_size = 18
 window_position = [200, 120]
 window_size = [660, 480]
-app_position = [151, 279]
+app_position = [151, 274]
 applications_position = [510, 274]
+# Finder window options
+show_pathbar = false
+show_status_bar = false
+show_sidebar = false
+show_toolbar = false

@@ -29,6 +29,7 @@
         "editor.wordWrapColumn": 120
     },
     "files.exclude": {
+        "**/__pycache__/**": true,
         "apps/extension/.chrome-profile": true,
         "apps/extension/.firefox-profile": true
     },

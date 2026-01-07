@@ -79,35 +79,35 @@ def run_with_tui(config, logger: BuildLogger) -> int:
     # Store result for after app exits
     result = {"success": False}
 
-    # Will be set once app is created
-    app: BuildApp | None = None
-
     # Start logging
     logger.start()
-    logger.write_line(f"=== Building Safari Extension ({config.build_description}) ===\n")
+    logger.write_line(
+        f"=== Building Safari Extension ({config.build_description}) ===\n"
+    )
 
-    def start_build() -> None:
-        """Start the build process when UI is ready."""
-        asyncio.create_task(do_build())
+    class BuildAppWithWorker(BuildApp):
+        """BuildApp that runs build as a Textual worker."""
 
-    async def do_build() -> None:
-        """Run build and exit when done."""
-        nonlocal app
-        if app is None:
-            return
-        try:
-            result["success"] = await run_build(config, app, use_pty=True)
-        except Exception as e:
-            app.log_error(f"Build failed: {e}")
-            result["success"] = False
-        finally:
-            app.exit()
+        def on_mount(self) -> None:
+            """Initialize UI and start build worker."""
+            super().on_mount()
+            # Use Textual's worker system for proper event loop integration
+            self.run_worker(self._run_build_worker, exclusive=True)
 
-    app = BuildApp(
+        async def _run_build_worker(self) -> None:
+            """Worker that runs the build."""
+            try:
+                result["success"] = await run_build(config, self, use_pty=True)
+            except Exception as e:
+                self.log_error(f"Build failed: {e}")
+                result["success"] = False
+            finally:
+                self.exit()
+
+    app = BuildAppWithWorker(
         build_description=config.build_description,
         total_steps=len(steps),
         step_names=step_names,
-        on_ready=start_build,
         logger=logger,
     )
 
@@ -137,7 +137,9 @@ def run_with_simple_ui(config, logger: BuildLogger) -> int:
     ui = SimpleUI(logger=logger)
 
     # Print header
-    header = f"\033[32m=== Building Safari Extension ({config.build_description}) ===\033[0m"
+    header = (
+        f"\033[32m=== Building Safari Extension ({config.build_description}) ===\033[0m"
+    )
     print(header)
     logger.write_line(header)
 

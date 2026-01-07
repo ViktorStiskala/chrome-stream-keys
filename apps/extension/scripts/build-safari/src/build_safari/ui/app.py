@@ -9,18 +9,27 @@ Provides a rich terminal interface with:
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from textual.app import App, ComposeResult
 from textual.containers import Container, Vertical
-from textual.widgets import DataTable, Footer, Header, RichLog, Static
+from textual.message import Message
+from textual.widgets import DataTable, RichLog, Static
 
 from build_safari.steps.base import StepStatus
 from build_safari.utils.terminal import OutputProcessor
 
 if TYPE_CHECKING:
     from build_safari.utils.logging import BuildLogger
+
+
+class UpdateStepStatus(Message):
+    """Message to update step status in the table."""
+
+    def __init__(self, step_num: int, status: StepStatus) -> None:
+        super().__init__()
+        self.step_num = step_num
+        self.status = status
 
 
 # ANSI color codes for terminal restoration
@@ -43,13 +52,14 @@ class BuildApp(App):
     #header-container {
         height: auto;
         max-height: 50%;
+        border: solid $primary;
+        margin: 1 1 0 1;
     }
     
     #title {
-        text-align: center;
         text-style: bold;
-        padding: 1;
-        background: $primary;
+        padding: 0 1;
+        color: $text;
     }
     
     #steps-table {
@@ -60,7 +70,7 @@ class BuildApp(App):
     
     #output-container {
         height: 1fr;
-        margin: 0 1 1 1;
+        margin: 1 1 1 1;
         border: solid $primary;
     }
     
@@ -69,9 +79,10 @@ class BuildApp(App):
     }
     """
 
+    # Keep bindings but don't show footer
     BINDINGS = [
-        ("q", "quit", "Quit"),
-        ("ctrl+c", "quit", "Quit"),
+        ("q", "quit"),
+        ("ctrl+c", "quit"),
     ]
 
     def __init__(
@@ -79,7 +90,6 @@ class BuildApp(App):
         build_description: str,
         total_steps: int,
         step_names: list[str] | None = None,
-        on_ready: Callable[[], None] | None = None,
         logger: BuildLogger | None = None,
     ) -> None:
         """Initialize the build app.
@@ -88,7 +98,6 @@ class BuildApp(App):
             build_description: Human-readable build description
             total_steps: Total number of build steps
             step_names: Optional list of step names
-            on_ready: Callback to invoke after UI is mounted and ready
             logger: Optional build logger for saving output to file
         """
         super().__init__()
@@ -96,7 +105,6 @@ class BuildApp(App):
         self.total_steps = total_steps
         self.step_names = step_names or []
         self.step_statuses: list[StepStatus] = [StepStatus.PENDING] * total_steps
-        self._on_ready = on_ready
         self.logger = logger
 
         # Output buffering for terminal restoration
@@ -105,29 +113,27 @@ class BuildApp(App):
 
         # Track build result
         self.build_success = False
-        
+
         # Track if UI is ready
         self._mounted = False
 
     def compose(self) -> ComposeResult:
         """Compose the UI layout."""
-        yield Header()
         with Container(id="header-container"):
             yield Static(
-                f"Stream Keys - Safari Extension Build ({self.build_description})",
+                f"Stream Keys Safari Build — {self.build_description}",
                 id="title",
             )
             yield DataTable(id="steps-table")
         with Vertical(id="output-container"):
-            yield RichLog(id="output-log", highlight=True, markup=False)
-        yield Footer()
+            yield RichLog(id="output-log", highlight=False, markup=True)
 
     def on_mount(self) -> None:
         """Initialize the steps table on mount."""
         # Prevent double initialization
         if self._mounted:
             return
-            
+
         table = self.query_one("#steps-table", DataTable)
         table.add_columns("Status", "Step", "Details")
 
@@ -139,12 +145,8 @@ class BuildApp(App):
                 name,
                 key=str(i),
             )
-        
+
         self._mounted = True
-        
-        # Call ready callback after short delay to ensure UI is fully rendered
-        if self._on_ready:
-            self.set_timer(0.1, self._on_ready)
 
     async def log_output(self, text: str) -> None:
         """Log command output to RichLog and buffer.
@@ -182,7 +184,7 @@ class BuildApp(App):
             total: Total number of steps
             name: Step name
         """
-        # Add to output buffer for terminal restoration
+        # Add to output buffer for terminal restoration (ANSI codes)
         header = f"\n{CYAN}[{step_num}/{total}] {name}{NC}\n"
         self.output_buffer.append(header)
 
@@ -197,11 +199,11 @@ class BuildApp(App):
         # Update table
         await self.update_step_status(step_num, StepStatus.RUNNING)
 
-        # Log to output using ANSI codes (if mounted)
+        # Log to output using Rich markup (if mounted)
         if self._mounted:
             try:
                 log = self.query_one("#output-log", RichLog)
-                log.write(f"{CYAN}[{step_num}/{total}] {name}{NC}")
+                log.write(f"[cyan]\\[{step_num}/{total}] {name}[/cyan]")
             except Exception:
                 pass
 
@@ -216,18 +218,31 @@ class BuildApp(App):
             return
 
         self.step_statuses[step_num - 1] = status
-        
+
         # Skip table update if not mounted yet
         if not self._mounted:
             return
-            
+
+        # Use post_message for thread-safe UI update from worker
+        self.post_message(UpdateStepStatus(step_num, status))
+
+    def on_update_step_status(self, message: UpdateStepStatus) -> None:
+        """Handle step status update message."""
         try:
             table = self.query_one("#steps-table", DataTable)
-            status_text = self._format_status_markup(status)
-            name = self.step_names[step_num - 1] if step_num <= len(self.step_names) else "..."
+            status_text = self._format_status_markup(message.status)
+            name = (
+                self.step_names[message.step_num - 1]
+                if message.step_num <= len(self.step_names)
+                else "..."
+            )
 
-            table.update_cell(str(step_num - 1), "Status", status_text)
-            table.update_cell(str(step_num - 1), "Details", name)
+            row_key = str(message.step_num - 1)
+            table.update_cell(row_key, "Status", status_text)
+            table.update_cell(row_key, "Details", name)
+            # Refresh the row to display the update
+            row_index = table.get_row_index(row_key)
+            table.refresh_row(row_index)
         except Exception:
             # Table not ready yet, ignore
             pass
@@ -244,7 +259,7 @@ class BuildApp(App):
         if self._mounted:
             try:
                 log = self.query_one("#output-log", RichLog)
-                log.write(f"  {GREEN}✓ {message}{NC}")
+                log.write(f"  [green]✓ {message}[/green]")
             except Exception:
                 pass
 
@@ -260,7 +275,7 @@ class BuildApp(App):
         if self._mounted:
             try:
                 log = self.query_one("#output-log", RichLog)
-                log.write(f"  {RED}✗ ERROR: {message}{NC}")
+                log.write(f"  [red]✗ ERROR: {message}[/red]")
             except Exception:
                 pass
 
@@ -276,7 +291,9 @@ class BuildApp(App):
         if self._mounted:
             try:
                 log = self.query_one("#output-log", RichLog)
-                log.write(message)
+                # Escape any Rich markup in the message
+                escaped = message.replace("[", r"\[").replace("]", r"\]")
+                log.write(escaped)
             except Exception:
                 pass
 

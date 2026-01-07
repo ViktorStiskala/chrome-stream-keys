@@ -34,6 +34,9 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v4
 
+      - name: Install Safari build tool dependencies
+        run: cd scripts/build-safari && uv sync --frozen
+
       - name: Install Apple certificate
         env:
           APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
@@ -66,13 +69,13 @@ jobs:
           APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
           APPLE_ID: ${{ vars.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-        run: uv run --directory scripts/build-safari python -m build_safari --dmg --signed --simple
+        run: cd scripts/build-safari && uv run python -m build_safari --dmg --signed --simple
 
       - name: Build Safari App Store Package
         env:
           APPLE_DEVELOPER_NAME: ${{ vars.APPLE_DEVELOPER_NAME }}
           APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
-        run: uv run --directory scripts/build-safari python -m build_safari --appstore --simple
+        run: cd scripts/build-safari && uv run python -m build_safari --appstore --simple
 
       - name: Clean up keychain
         if: always()
