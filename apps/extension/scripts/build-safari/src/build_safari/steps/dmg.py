@@ -1,5 +1,6 @@
 """DMG creation step using dmgbuild."""
 
+import asyncio
 from collections.abc import Awaitable, Callable
 
 import dmgbuild
@@ -98,7 +99,9 @@ class DMGCreateStep(BuildStep):
             }
 
             # Use dmgbuild with in-memory settings (no settings file needed)
-            dmgbuild.build_dmg(
+            # Run in thread to avoid blocking the event loop (allows UI updates)
+            await asyncio.to_thread(
+                dmgbuild.build_dmg,
                 filename=str(output_path),
                 volume_name=dmg_config.title,
                 settings=settings,

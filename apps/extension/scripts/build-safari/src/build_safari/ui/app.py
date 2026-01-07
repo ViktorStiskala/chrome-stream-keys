@@ -32,6 +32,20 @@ class UpdateStepStatus(Message):
         self.status = status
 
 
+class ReadOnlyDataTable(DataTable):
+    """DataTable that ignores mouse events but allows programmatic cursor movement."""
+
+    def on_click(self, event) -> None:
+        """Ignore mouse clicks to prevent user selection."""
+        event.stop()
+        event.prevent_default()
+
+    def on_mouse_move(self, event) -> None:
+        """Ignore mouse move to prevent hover highlighting."""
+        event.stop()
+        event.prevent_default()
+
+
 # ANSI color codes for terminal restoration
 CYAN = "\033[0;36m"
 GREEN = "\033[0;32m"
@@ -66,6 +80,11 @@ class BuildApp(App):
         height: auto;
         max-height: 15;
         margin: 0 1;
+    }
+    
+    /* Disable hover effect on steps table */
+    #steps-table > .datatable--hover {
+        background: transparent;
     }
     
     #output-container {
@@ -117,6 +136,10 @@ class BuildApp(App):
         # Track if UI is ready
         self._mounted = False
 
+        # Store table keys for updates
+        self._row_keys: list = []
+        self._column_keys: dict[str, object] = {}
+
     def compose(self) -> ComposeResult:
         """Compose the UI layout."""
         with Container(id="header-container"):
@@ -124,7 +147,8 @@ class BuildApp(App):
                 f"Stream Keys Safari Build — {self.build_description}",
                 id="title",
             )
-            yield DataTable(id="steps-table")
+            # cursor_type="row" highlights full row, ReadOnlyDataTable ignores clicks
+            yield ReadOnlyDataTable(id="steps-table", cursor_type="row")
         with Vertical(id="output-container"):
             yield RichLog(id="output-log", highlight=False, markup=True)
 
@@ -134,17 +158,29 @@ class BuildApp(App):
         if self._mounted:
             return
 
-        table = self.query_one("#steps-table", DataTable)
-        table.add_columns("Status", "Step", "Details")
+        table = self.query_one("#steps-table", ReadOnlyDataTable)
 
+        # Disable user interaction (keyboard navigation)
+        table.can_focus = False
+
+        # Store column keys for later updates
+        col_keys = table.add_columns("Status", "Step", "Details")
+        self._column_keys = {
+            "Status": col_keys[0],
+            "Step": col_keys[1],
+            "Details": col_keys[2],
+        }
+
+        # Store row keys for later updates
+        self._row_keys = []
         for i in range(self.total_steps):
             name = self.step_names[i] if i < len(self.step_names) else "..."
-            table.add_row(
+            row_key = table.add_row(
                 "[dim][PENDING][/dim]",
                 f"[{i + 1}/{self.total_steps}]",
                 name,
-                key=str(i),
             )
+            self._row_keys.append(row_key)
 
         self._mounted = True
 
@@ -229,20 +265,26 @@ class BuildApp(App):
     def on_update_step_status(self, message: UpdateStepStatus) -> None:
         """Handle step status update message."""
         try:
-            table = self.query_one("#steps-table", DataTable)
-            status_text = self._format_status_markup(message.status)
-            name = (
-                self.step_names[message.step_num - 1]
-                if message.step_num <= len(self.step_names)
-                else "..."
-            )
+            row_idx = message.step_num - 1
+            if row_idx < 0 or row_idx >= len(self._row_keys):
+                return
 
-            row_key = str(message.step_num - 1)
-            table.update_cell(row_key, "Status", status_text)
-            table.update_cell(row_key, "Details", name)
-            # Refresh the row to display the update
-            row_index = table.get_row_index(row_key)
-            table.refresh_row(row_index)
+            table = self.query_one("#steps-table", ReadOnlyDataTable)
+            status_text = self._format_status_markup(message.status)
+            name = self.step_names[row_idx] if row_idx < len(self.step_names) else "..."
+
+            # Use stored RowKey and ColumnKey objects
+            row_key = self._row_keys[row_idx]
+            status_col = self._column_keys["Status"]
+            details_col = self._column_keys["Details"]
+
+            table.update_cell(row_key, status_col, status_text)
+            table.update_cell(row_key, details_col, name)
+
+            # Move cursor to running step to highlight it
+            if message.status == StepStatus.RUNNING:
+                table.move_cursor(row=row_idx)
+
         except Exception:
             # Table not ready yet, ignore
             pass

@@ -33,5 +33,6 @@
         "apps/extension/.chrome-profile": true,
         "apps/extension/.firefox-profile": true
     },
-    "flake8.enabled": false
+    "flake8.enabled": false,
+    "python.venvPath": ""
 }
