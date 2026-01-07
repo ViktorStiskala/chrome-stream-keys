@@ -259,14 +259,90 @@ function setupVideoTracking(
   // Track when setup started (for load time capture window)
   const setupStartTime = Date.now();
 
-  let loadTimeCaptureTimeout: number | null = null;
-  let readyForTrackingTimeout: number | null = null;
+  // Ready state tracking
+  let readyScheduled = false;
+  let fallbackTimeout: number | null = null;
+  let captureDelayTimeout: number | null = null;
+  let readyDelayTimeout: number | null = null;
 
   /**
    * Get the actual playback time using the video's augmented method.
    */
   const getActualPlaybackTime = (v: StreamKeysVideoElement): number => {
     return v._streamKeysGetPlaybackTime?.() ?? v.currentTime;
+  };
+
+  /**
+   * Check if video is actually loaded and ready for tracking.
+   * Uses augmented duration getter to support services like Disney+
+   * where native video.duration is unreliable (buffer-relative).
+   */
+  const isVideoLoaded = (): boolean => {
+    const duration = video._streamKeysGetDuration?.() ?? video.duration;
+    return duration > 0 && !isNaN(duration);
+  };
+
+  /**
+   * Handle video becoming ready - capture load time if possible, then enable tracking.
+   * Called by video events (canplay, playing, loadeddata) and fallback timeout.
+   */
+  const handleVideoReady = () => {
+    // Already fully ready - clear any pending fallback and exit
+    if (video._streamKeysReadyForTracking) {
+      if (fallbackTimeout !== null) {
+        clearTimeout(fallbackTimeout);
+        fallbackTimeout = null;
+      }
+      return;
+    }
+
+    // Already scheduled to become ready - fallback was cleared when scheduled
+    if (readyScheduled) return;
+
+    // Check video is actually loaded (uses augmented duration for Disney+ compatibility)
+    if (!isVideoLoaded()) return;
+
+    // Mark as scheduled and clear fallback - we're taking over
+    readyScheduled = true;
+    if (fallbackTimeout !== null) {
+      clearTimeout(fallbackTimeout);
+      fallbackTimeout = null;
+    }
+
+    const elapsedSinceSetup = Date.now() - setupStartTime;
+    const withinCaptureWindow = elapsedSinceSetup <= loadTimeCaptureDelay;
+
+    if (withinCaptureWindow && state.loadTimePosition === null) {
+      // Within window - wait for auto-resume, then capture and set ready
+      const remainingDelay = Math.max(0, loadTimeCaptureDelay - elapsedSinceSetup);
+
+      captureDelayTimeout = window.setTimeout(() => {
+        captureDelayTimeout = null;
+
+        // Attempt load time capture
+        const actualTime = getActualPlaybackTime(video);
+        if (state.loadTimePosition === null && actualTime >= SEEK_MIN_DIFF_SECONDS) {
+          state.loadTimePosition = actualTime;
+          console.info(
+            `[StreamKeys] Load time position captured: ${Video.formatTime(actualTime)}`
+          );
+          emitPositionChanged();
+        }
+
+        // Set ready after additional delay
+        readyDelayTimeout = window.setTimeout(() => {
+          readyDelayTimeout = null;
+          if (!video._streamKeysReadyForTracking) {
+            video._streamKeysReadyForTracking = true;
+            console.info('[StreamKeys] Ready to track seeks');
+          }
+        }, readyForTrackingDelay);
+      }, remainingDelay);
+    } else {
+      // Past window - just set ready immediately
+      video._streamKeysReadyForTracking = true;
+      console.info('[StreamKeys] Ready to track seeks');
+    }
   };
 
   // Handle seeking events - use stable time (guaranteed pre-seek value)
@@ -296,63 +372,31 @@ function setupVideoTracking(
     }
   };
 
-  // Capture load time position
-  const captureLoadTimeOnce = () => {
-    // Only allow load time capture within the initial load window.
-    // After loadTimeCaptureDelay has passed since setup, we're past the load phase.
-    // This prevents canplay/playing events after seeks from triggering a new capture,
-    // while still allowing services with auto-resume (e.g., HBO Max) to capture the
-    // resumed position within their configured delay window.
-    const elapsedSinceSetup = Date.now() - setupStartTime;
-    if (elapsedSinceSetup > loadTimeCaptureDelay) return;
-
-    if (state.loadTimePosition === null && loadTimeCaptureTimeout === null) {
-      loadTimeCaptureTimeout = window.setTimeout(() => {
-        loadTimeCaptureTimeout = null;
-        const actualTime = getActualPlaybackTime(video);
-
-        if (state.loadTimePosition === null && actualTime >= SEEK_MIN_DIFF_SECONDS) {
-          state.loadTimePosition = actualTime;
-          console.info(
-            `[StreamKeys] Load time position captured: ${Video.formatTime(state.loadTimePosition)}`
-          );
-          emitPositionChanged();
-        }
-
-        if (readyForTrackingTimeout === null) {
-          readyForTrackingTimeout = window.setTimeout(() => {
-            readyForTrackingTimeout = null;
-            if (!video._streamKeysReadyForTracking) {
-              video._streamKeysReadyForTracking = true;
-              console.info('[StreamKeys] Ready to track seeks');
-            }
-          }, readyForTrackingDelay);
-        }
-      }, loadTimeCaptureDelay);
-    }
-  };
-
   // After seek completes, sync last known time but preserve stable time
   // The stable time will be updated by the RAF loop with the proper 500ms delay
   // This ensures that rapid consecutive seeks don't corrupt the stable time
   const handleSeeked = () => {
     const currentTime = getActualPlaybackTime(video);
     video._streamKeysLastKnownTime = currentTime;
-    // Note: We intentionally do NOT update _streamKeysStableTime here
-    // The RAF loop will update it with proper delay, ensuring it always
-    // reflects a position from 500ms ago (guaranteed pre-seek value)
+    // IMPORTANT: Do NOT update _streamKeysStableTime here!
+    // The RAF loop handles it with proper 500ms delay for Disney+ compatibility.
+    // See disney.mdc for details on the progress bar timing issue.
 
+    // Try to become ready if not yet (seek completed = video is loaded)
     if (!video._streamKeysReadyForTracking) {
-      captureLoadTimeOnce();
+      handleVideoReady();
     }
   };
 
   // Set up listeners
   video.addEventListener('seeking', handleSeeking);
   video.addEventListener('timeupdate', handleTimeUpdate);
-  video.addEventListener('canplay', captureLoadTimeOnce);
-  video.addEventListener('playing', captureLoadTimeOnce);
   video.addEventListener('seeked', handleSeeked);
+
+  // Event-based triggers for ready state
+  video.addEventListener('canplay', handleVideoReady);
+  video.addEventListener('playing', handleVideoReady);
+  video.addEventListener('loadeddata', handleVideoReady);
 
   // Initialize if video is already loaded
   if (video.readyState >= 1) {
@@ -362,9 +406,22 @@ function setupVideoTracking(
     // This prevents the first seek from using _streamKeysLastKnownTime fallback
     video._streamKeysStableTime = initialTime;
   }
+
+  // Check immediately if already loaded
   if (video.readyState >= 3) {
-    captureLoadTimeOnce();
+    handleVideoReady();
   }
+
+  // Fallback timeout - ensures ready flag is eventually set
+  // Will be cleared if event-based trigger succeeds first
+  const maxWaitTime = loadTimeCaptureDelay + readyForTrackingDelay + 2000; // +2s buffer
+  fallbackTimeout = window.setTimeout(() => {
+    fallbackTimeout = null;
+    if (!video._streamKeysReadyForTracking && isVideoLoaded()) {
+      video._streamKeysReadyForTracking = true;
+      console.info('[StreamKeys] Ready to track seeks (fallback)');
+    }
+  }, maxWaitTime);
 
   video._streamKeysSeekListenerAdded = true;
 
@@ -415,16 +472,23 @@ function setupVideoTracking(
     video.removeEventListener('seeking', handleSeeking);
     video.removeEventListener('seeked', handleSeeked);
     video.removeEventListener('timeupdate', handleTimeUpdate);
-    video.removeEventListener('canplay', captureLoadTimeOnce);
-    video.removeEventListener('playing', captureLoadTimeOnce);
+    video.removeEventListener('canplay', handleVideoReady);
+    video.removeEventListener('playing', handleVideoReady);
+    video.removeEventListener('loadeddata', handleVideoReady);
     video._streamKeysSeekListenerAdded = false;
-    if (loadTimeCaptureTimeout !== null) {
-      clearTimeout(loadTimeCaptureTimeout);
-      loadTimeCaptureTimeout = null;
+
+    // Clear all ready-tracking timeouts
+    if (fallbackTimeout !== null) {
+      clearTimeout(fallbackTimeout);
+      fallbackTimeout = null;
     }
-    if (readyForTrackingTimeout !== null) {
-      clearTimeout(readyForTrackingTimeout);
-      readyForTrackingTimeout = null;
+    if (captureDelayTimeout !== null) {
+      clearTimeout(captureDelayTimeout);
+      captureDelayTimeout = null;
+    }
+    if (readyDelayTimeout !== null) {
+      clearTimeout(readyDelayTimeout);
+      readyDelayTimeout = null;
     }
     if (trackingFrame !== null) {
       cancelAnimationFrame(trackingFrame);

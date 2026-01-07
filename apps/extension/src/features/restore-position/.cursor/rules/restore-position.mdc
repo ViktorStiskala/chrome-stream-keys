@@ -54,28 +54,110 @@ The controller imports from `./ui/dialog` and orchestrates the dialog lifecycle 
 
 Note: User saved position (S key) bypasses all these rules and always saves.
 
+## Ready State Management
+
+The ready state determines when position tracking is enabled. Uses an **event-driven approach** with fallback timeout.
+
+### Primary Triggers
+
+Ready state is triggered by video events:
+- `canplay` - video can play at current position
+- `playing` - video is actively playing
+- `loadeddata` - first frame of video loaded
+- `seeked` - seek operation completed (calls `handleVideoReady` if not yet ready)
+
+### Fallback Timeout
+
+If no events fire, a fallback timeout ensures ready state is eventually set:
+```
+maxWaitTime = loadTimeCaptureDelay + readyForTrackingDelay + 2000ms
+```
+
+This handles edge cases like slow network connections or services that don't emit expected events.
+
+### Video Loaded Validation
+
+Before setting ready state, `isVideoLoaded()` validates the video is actually loaded:
+```typescript
+const isVideoLoaded = (): boolean => {
+  const duration = video._streamKeysGetDuration?.() ?? video.duration;
+  return duration > 0 && !isNaN(duration);
+};
+```
+
+**Important:** Uses augmented `_streamKeysGetDuration()` to support Disney+ where native `video.duration` is unreliable (buffer-relative). Falls back to native duration for other services.
+
+### Capture Window Behavior
+
+The `handleVideoReady` function handles two scenarios:
+
+1. **Within capture window** (`elapsed <= loadTimeCaptureDelay`):
+   - Waits for `remainingDelay` (time until window closes)
+   - Attempts to capture load time position if >= 15 seconds
+   - Sets ready flag after additional `readyForTrackingDelay`
+
+2. **Past capture window**:
+   - Sets ready flag immediately
+   - Does NOT attempt load time capture
+
+### State Flags and Variables
+
+| Name | Location | Purpose |
+|------|----------|---------|
+| `readyScheduled` | local variable | Prevents duplicate scheduling |
+| `_streamKeysReadyForTracking` | video element | Enables seek position saving |
+| `fallbackTimeout` | local variable | Fallback timeout reference |
+| `captureDelayTimeout` | local variable | Capture delay timeout reference |
+| `readyDelayTimeout` | local variable | Ready delay timeout reference |
+
+### Fallback Timeout Cleanup
+
+The fallback timeout is cleared when:
+- Event-based trigger succeeds (`readyScheduled` set)
+- Video is already ready (`_streamKeysReadyForTracking` true)
+- Cleanup function is called (new video detected)
+
 ## Load Time Position Capture
 
-Capture happens on `canplay`, `playing`, or `seeked` events:
-1. Wait 1 second for player to settle
+Capture happens within the load time capture window:
+1. Wait `loadTimeCaptureDelay` (default: 1000ms) for player to settle
 2. Only capture if position >= 15 seconds
-3. Mark video ready for tracking after 500ms delay (avoids recording initial resume seek)
+3. Mark video ready for tracking after `readyForTrackingDelay` (default: 500ms)
 
 ## Video Change Detection
 
 History is automatically cleared when navigating to a new video:
 
-- **Tracked state**: Current video element AND its source (`video.src || video.currentSrc`)
+- **Tracked state**: Current video element AND its source/content ID
 - **Detection**: Runs every 1 second via `setupInterval`
 - **Triggers**:
   - Different video element (HBO Max pattern: new DOM element for each video)
   - Same video element with different source (Disney+ pattern: blob URL changes)
-- **On change**:
-  1. Log "[StreamKeys] New video detected, position history cleared"
-  2. Clean up old video listeners
-  3. Reset state via `PositionHistory.reset(state)`
-  4. Clear `_streamKeysSeekListenerAdded` flag on old video
-  5. Set up tracking for new video (which recaptures load time position)
+  - Same video element with different content ID (BBC pattern: URL-based ID changes)
+
+### New Video Detection Flow
+
+1. `index.ts` detects new video (element OR content ID OR source change)
+2. Calls cleanup function from previous `setupTracking()`:
+   - Removes event listeners (`canplay`, `playing`, `loadeddata`, `seeked`, `seeking`, `timeupdate`)
+   - Clears all pending timeouts (`fallbackTimeout`, `captureDelayTimeout`, `readyDelayTimeout`)
+   - Stops RAF tracking loop
+3. Resets `_streamKeysSeekListenerAdded = false` on old video
+4. Calls `PositionHistory.reset(state)` to clear history state
+5. Calls `setupTracking()` which:
+   - Resets `_streamKeysReadyForTracking = false` and `_streamKeysPlaybackStarted = false`
+   - Initializes fresh local variables (`readyScheduled = false`, timeout refs = null)
+   - Sets up new event listeners and schedules new fallback timeout
+
+### Video Element Flag Lifecycle
+
+| Flag | Location | Reset When | Purpose |
+|------|----------|------------|---------|
+| `_streamKeysSeekListenerAdded` | video element | New video detected (index.ts) | Prevents duplicate listeners |
+| `_streamKeysReadyForTracking` | video element | Start of setupTracking() | Enables seek position saving |
+| `_streamKeysPlaybackStarted` | video element | Start of setupTracking() | Tracks if playback has started |
+| `_streamKeysStableTime` | video element | Re-initialized in setupTracking() | Delayed time (pre-seek safe) |
+| `_streamKeysLastKnownTime` | video element | Re-initialized in setupTracking() | Current time |
 
 ## User Saved Position (S Key)
 
