@@ -227,6 +227,103 @@ BBC iPlayer uses standard HTML5 video, so `video.currentTime` works correctly:
 - **Absolute seeks**: Direct `video.currentTime = time` (no custom `seekToTime` needed)
 - **Custom seek time**: Works with keyboard shortcuts and media keys
 
+## Position Tracking Timing
+
+**Critical:** BBC's player initializes slowly. The default 1000ms window for capturing load time position is insufficient.
+
+### Why Custom Timing is Required
+
+BBC iPlayer's initialization sequence:
+1. Page loads with video at position 0
+2. Player component initializes (can take 1-2 seconds)
+3. Auto-resume logic fetches saved position from BBC servers
+4. Video seeks to the saved position
+5. `video.currentTime` finally reflects the actual playback position
+
+By the time step 5 completes, the default 1000ms capture window has often closed, resulting in:
+- No load time position captured
+- `_streamKeysReadyForTracking` never becomes true
+- No seek positions are ever saved
+
+### Solution
+
+The BBC handler uses extended timing via `positionTrackingTiming`:
+
+```typescript
+positionTrackingTiming: {
+  loadTimeCaptureDelay: 3000,    // 3s window for slow player init
+  readyForTrackingDelay: 500,   // Standard delay after capture
+},
+```
+
+This gives BBC's player enough time to complete auto-resume before the load time capture attempt.
+
+## MediaSource Extensions (MSE) and Content ID Tracking
+
+**Important:** BBC uses MediaSource Extensions (MSE/DASH.js) for adaptive bitrate streaming. This causes `video.currentSrc` to change frequently with dynamic `blob:` URLs as the player switches between quality levels and segments.
+
+### Problem with Source Tracking
+
+The default position history tracking detects "new video" by checking if `video.currentSrc` changed. On BBC, this caused false positives - the extension would repeatedly log "New video detected, position history cleared" even when watching the same episode, because MSE kept changing the blob URL.
+
+### Solution: URL-Based Content ID
+
+BBC provides `getContentId()` which extracts the episode ID from the URL:
+
+```typescript
+/**
+ * BBC URL pattern: /iplayer/episode/{episodeId}/{slug}
+ * Example: /iplayer/episode/m002nzps/the-traitors-series-4-episode-1
+ */
+function getContentId(): string | null {
+  const match = window.location.pathname.match(/\/iplayer\/episode\/([^/]+)/);
+  return match?.[1] ?? null;
+}
+```
+
+This is passed to the handler factory, which uses it instead of source tracking:
+- **Same content ID + blob URL changes**: No history clear (correct - same episode)
+- **Different content ID**: History cleared (correct - new episode via SPA navigation)
+
+### Where getContentId is Used
+
+The `getContentId` function is only called in `restore-position/index.ts` during video detection in `setupVideoListeners()`. Other modules (dialog, history, keyboard) don't need it - they work with the video element and position state.
+
+## Trailer Handling
+
+BBC shows trailers before some episodes. The trailer plays on the **same URL** as the main content.
+
+### How Trailers are Detected
+
+```typescript
+function isTrailerPlaying(): boolean {
+  return document.querySelector('.skip-trailer') !== null;
+}
+```
+
+The `.skip-trailer` button appears in the DOM when a trailer is active.
+
+### Position Tracking During Trailers
+
+**Important:** `getVideo()` returns `null` during trailers:
+
+```typescript
+function getVideo(): HTMLVideoElement | null {
+  if (isTrailerPlaying()) return null;  // Don't track during trailers
+  // ... get video from Shadow DOM
+}
+```
+
+This means:
+- **During trailer**: No position tracking (no video element returned)
+- **After trailer ends**: Position tracking starts normally
+- **Content ID**: Stays the same (same URL) - no false "new video" detection
+
+The trailer and main content share the same episode ID from the URL. When the trailer ends and main content starts:
+1. `getVideo()` starts returning the video element
+2. `getContentId()` returns the same episode ID
+3. No history clear occurs (correct behavior)
+
 ## SPA Navigation
 
 BBC iPlayer uses SPA navigation. The handler is injected on URLs matching `bbc.co.uk/iplayer`. The background script handles both:
@@ -313,7 +410,7 @@ Tests would be co-located at `src/services/bbc.test.ts`.
 The `BBCHandler` exports a `_test` object with internal functions:
 ```typescript
 BBCHandler._test.getPlayer()                // Get video-layout element
-BBCHandler._test.getVideo()                 // Get video element
+BBCHandler._test.getVideo()                 // Get video element (null during trailers)
 BBCHandler._test.getButton(code)            // Get button for key code
 BBCHandler._test.getSeekButtons()           // Get backward/forward buttons
 BBCHandler._test.getShadowButton(sel)       // Get button from nested shadow DOM
@@ -322,6 +419,9 @@ BBCHandler._test.getNestedShadow(...)       // Traverse nested shadow DOM
 BBCHandler._test.getSubtitlesToggleShadow() // Get smp-toggle's shadow root
 BBCHandler._test.getSubtitlesToggle()       // Get .toggle element (state + click target)
 BBCHandler._test.clickSubtitleToggle()      // Toggle using pointer events
+BBCHandler._test.getDialogContainer()       // Get container for restore dialog (Shadow DOM)
+BBCHandler._test.getContentId()             // Get episode ID from URL (for MSE tracking)
+BBCHandler._test.isTrailerPlaying()         // Check if trailer is currently playing
 BBCHandler._test.subtitles                  // Subtitle config object
 ```
 

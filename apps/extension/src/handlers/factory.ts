@@ -98,6 +98,7 @@ function createHandler(config: HandlerConfig): HandlerAPI {
       seekToTime: config.seekToTime,
       timing: config.positionTrackingTiming,
       getDialogContainer: config.getDialogContainer,
+      getContentId: config.getContentId,
     });
     cleanupFns.push(restorePositionAPI.cleanup);
   }

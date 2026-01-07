@@ -49,9 +49,15 @@ scripts/build-safari/
 # Distribution (requires APPLE_TEAM_ID, APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD)
 ./scripts/build-safari/main.sh --dmg --signed
 
+# Rebuild DMG from existing production build (skips Vite, Xcode conversion, Xcode build)
+./scripts/build-safari/main.sh --rebuild-dmg           # unsigned
+./scripts/build-safari/main.sh --rebuild-dmg --signed  # signed + notarized
+
 # App Store (requires APPLE_TEAM_ID)
 ./scripts/build-safari/main.sh --appstore
 ```
+
+The `--rebuild-dmg` option is useful when you need to regenerate the DMG without rebuilding the entire app. It validates that the existing build exists and has a valid signature (if --signed).
 
 ### Styled DMG Installer
 
@@ -65,7 +71,24 @@ Background: `assets/dmg-background.png` (660x400px, or 1320x800 for Retina)
 
 ### Live Progress Display
 
-In TTY mode, the build shows a live ASCII progress header with step status. Falls back to simple output in CI.
+In TTY mode, the build shows a live ASCII table with columns for Status, Step, and Details:
+
+```
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║ Stream Keys - Safari Extension Build                    Signed + Notarized DMG║
+╠═══════════╦═══════╦═══════════════════════════════════════════════════════════╣
+║ Status    ║ Step  ║ Details                                                   ║
+╠═══════════╬═══════╬═══════════════════════════════════════════════════════════╣
+║ [SUCCESS] ║ [1/7] ║ Building Safari extension...                              ║
+║ [RUNNING] ║ [2/7] ║ Converting to Xcode project...                            ║
+...
+```
+
+Status indicators: `[RUNNING]` (yellow), `[SUCCESS]` (green), `[FAILED ]` (red), `[PENDING]` (dim)
+
+When a command produces no output for 2+ seconds, the step line shows "(no output for Xs)" with live updates. This provides feedback during long-running operations like `npx appdmg`.
+
+Falls back to simple output in CI environments.
 
 ## Code Quality
 

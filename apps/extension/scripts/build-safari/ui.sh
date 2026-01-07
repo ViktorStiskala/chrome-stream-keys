@@ -9,6 +9,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 DIM='\033[2m'
+BOLD='\033[1m'
 NC='\033[0m'
 
 # TTY detection
@@ -22,6 +23,10 @@ fi
 # Track layout dimensions
 HEADER_LINES=0
 OUTPUT_START_LINE=0
+
+# Column widths (fixed)
+COL_STATUS_WIDTH=11   # " [RUNNING] "
+COL_STEP_WIDTH=7      # " [1/7] "
 
 # =============================================================================
 # Terminal Size Detection
@@ -51,6 +56,7 @@ detect_terminal_size() {
 # Drawing Primitives
 # =============================================================================
 
+# Draw a horizontal line without columns (for title area)
 draw_hline() {
     local row=$1
     local left_char="$2"
@@ -60,6 +66,35 @@ draw_hline() {
     tput cup $row 0
     printf "%s" "$left_char"
     for ((i=1; i<TERM_WIDTH-1; i++)); do
+        printf "%s" "$fill_char"
+    done
+    printf "%s" "$right_char"
+}
+
+# Draw a horizontal line with column separators
+draw_hline_cols() {
+    local row=$1
+    local left_char="$2"
+    local fill_char="$3"
+    local col_char="$4"
+    local right_char="$5"
+    
+    local details_width=$((TERM_WIDTH - COL_STATUS_WIDTH - COL_STEP_WIDTH - 4))
+    
+    tput cup $row 0
+    printf "%s" "$left_char"
+    # Status column
+    for ((i=0; i<COL_STATUS_WIDTH; i++)); do
+        printf "%s" "$fill_char"
+    done
+    printf "%s" "$col_char"
+    # Step column
+    for ((i=0; i<COL_STEP_WIDTH; i++)); do
+        printf "%s" "$fill_char"
+    done
+    printf "%s" "$col_char"
+    # Details column
+    for ((i=0; i<details_width; i++)); do
         printf "%s" "$fill_char"
     done
     printf "%s" "$right_char"
@@ -88,8 +123,15 @@ init_display() {
     
     detect_terminal_size
     
-    # Header: top border + title + sep + steps + bottom border = 4 + TOTAL_STEPS
-    HEADER_LINES=$((TOTAL_STEPS + 4))
+    # Header structure:
+    # Row 0: Top border
+    # Row 1: Title row
+    # Row 2: Column separator (introduces columns)
+    # Row 3: Column headers (bold)
+    # Row 4: Header separator
+    # Row 5 to 5+TOTAL_STEPS-1: Step rows
+    # Row 5+TOTAL_STEPS: Bottom border
+    HEADER_LINES=$((TOTAL_STEPS + 6))
     OUTPUT_START_LINE=$((HEADER_LINES))
     
     # Need enough space for header + some output
@@ -110,23 +152,35 @@ init_display() {
 }
 
 draw_header() {
-    # Top border
+    local details_width=$((TERM_WIDTH - COL_STATUS_WIDTH - COL_STEP_WIDTH - 4))
+    
+    # Row 0: Top border (no columns yet)
     draw_hline 0 "╔" "═" "╗"
     
-    # Title row
+    # Row 1: Title row
     local title="Stream Keys - Safari Extension Build"
     draw_row_lr 1 "$title" "$BUILD_DESCRIPTION"
     
-    # Separator
-    draw_hline 2 "╠" "═" "╣"
+    # Row 2: Separator that introduces columns
+    draw_hline_cols 2 "╠" "═" "╦" "╣"
     
-    # Step rows
+    # Row 3: Column headers (bold)
+    tput cup 3 0
+    printf "║ %b%-9s%b ║ %b%-5s%b ║ %b%-*s%b ║" \
+        "$BOLD" "Status" "$NC" \
+        "$BOLD" "Step" "$NC" \
+        "$BOLD" "$((details_width - 2))" "Details" "$NC"
+    
+    # Row 4: Header separator
+    draw_hline_cols 4 "╠" "═" "╬" "╣"
+    
+    # Step rows (starting at row 5)
     for i in $(seq 0 $((TOTAL_STEPS - 1))); do
-        draw_step_line $((i + 3)) $i "pending"
+        draw_step_line $((i + 5)) $i "pending"
     done
     
     # Bottom border
-    draw_hline $((TOTAL_STEPS + 3)) "╚" "═" "╝"
+    draw_hline_cols $((TOTAL_STEPS + 5)) "╚" "═" "╩" "╝"
 }
 
 draw_step_line() {
@@ -140,21 +194,20 @@ draw_step_line() {
     local status_color
     
     case "$status" in
-        ok)      status_text="OK"; status_color="$GREEN" ;;
-        fail)    status_text="FAIL"; status_color="$RED" ;;
-        running) status_text="RUN"; status_color="$YELLOW" ;;
-        *)       status_text="..."; status_color="$DIM" ;;
+        ok)      status_text="[SUCCESS]"; status_color="$GREEN" ;;
+        fail)    status_text="[FAILED ]"; status_color="$RED" ;;
+        running) status_text="[RUNNING]"; status_color="$YELLOW" ;;
+        *)       status_text="[PENDING]"; status_color="$DIM" ;;
     esac
     
-    local left_text="[$step_num/$TOTAL_STEPS] $name"
-    local left_len=${#left_text}
-    local status_display_len=${#status_text}
-    local space=$((TERM_WIDTH - 4 - left_len - status_display_len))
+    local step_text="[$step_num/$TOTAL_STEPS]"
+    local details_width=$((TERM_WIDTH - COL_STATUS_WIDTH - COL_STEP_WIDTH - 4))
     
     tput cup $row 0
-    printf "║ %s" "$left_text"
-    printf "%${space}s" ""
-    printf "%b%s%b ║" "$status_color" "$status_text" "$NC"
+    printf "║ %b%-9s%b ║ %-5s ║ %-*s ║" \
+        "$status_color" "$status_text" "$NC" \
+        "$step_text" \
+        "$((details_width - 2))" "$name"
 }
 
 update_step_status() {
@@ -168,8 +221,8 @@ update_step_status() {
     # Temporarily reset scrolling region to access header
     tput csr 0 $((TERM_HEIGHT - 1))
     
-    # Update the step line
-    draw_step_line $((step_idx + 3)) $step_idx "$status"
+    # Update the step line (step rows start at row 5)
+    draw_step_line $((step_idx + 5)) $step_idx "$status"
     
     # Restore scrolling region
     tput csr $OUTPUT_START_LINE $((TERM_HEIGHT - 1))
@@ -186,6 +239,84 @@ cleanup_display() {
     tput cnorm 2>/dev/null || true
     tput cup $((TERM_HEIGHT - 1)) 0
     echo ""
+}
+
+# =============================================================================
+# No-Output Indicator
+# =============================================================================
+
+# Update the step line with a "waiting" indicator
+# Called from run() when command produces no output for 2+ seconds
+update_no_output_indicator() {
+    local elapsed=$1
+    [ "$IS_TTY" = false ] && return
+    
+    local step_idx=$((CURRENT_STEP - 1))
+    local row=$((step_idx + 5))
+    local step_num=$CURRENT_STEP
+    local name="${STEP_NAMES[$step_idx]:-...}"
+    
+    # Sanity check for race conditions - show generic indicator for unreasonable values
+    local indicator
+    if [ $elapsed -lt 0 ] || [ $elapsed -gt 10000 ]; then
+        indicator=" [Waiting: ...]"
+    else
+        indicator=" [Waiting: ${elapsed}s]"
+    fi
+    
+    local status_text="[RUNNING]"
+    local status_color="$YELLOW"
+    
+    local step_text="[$step_num/$TOTAL_STEPS]"
+    local details_width=$((TERM_WIDTH - COL_STATUS_WIDTH - COL_STEP_WIDTH - 4))
+    local name_with_indicator="${name}${indicator}"
+    
+    # Truncate if too long
+    local max_name_len=$((details_width - 2))
+    if [ ${#name_with_indicator} -gt $max_name_len ]; then
+        name_with_indicator="${name_with_indicator:0:$((max_name_len - 3))}..."
+    fi
+    
+    # Save cursor position
+    tput sc
+    
+    # Temporarily reset scrolling region to access header
+    tput csr 0 $((TERM_HEIGHT - 1))
+    
+    # Draw the step line with indicator
+    tput cup $row 0
+    printf "║ %b%-9s%b ║ %-5s ║ %b%-*s%b ║" \
+        "$status_color" "$status_text" "$NC" \
+        "$step_text" \
+        "$DIM" "$((details_width - 2))" "$name_with_indicator" "$NC"
+    
+    # Restore scrolling region
+    tput csr $OUTPUT_START_LINE $((TERM_HEIGHT - 1))
+    
+    # Restore cursor position
+    tput rc
+}
+
+# Clear the no-output indicator by redrawing the step line normally
+clear_no_output_indicator() {
+    [ "$IS_TTY" = false ] && return
+    
+    local step_idx=$((CURRENT_STEP - 1))
+    
+    # Save cursor position
+    tput sc
+    
+    # Temporarily reset scrolling region to access header
+    tput csr 0 $((TERM_HEIGHT - 1))
+    
+    # Redraw step line without indicator
+    draw_step_line $((step_idx + 5)) $step_idx "running"
+    
+    # Restore scrolling region
+    tput csr $OUTPUT_START_LINE $((TERM_HEIGHT - 1))
+    
+    # Restore cursor position
+    tput rc
 }
 
 # =============================================================================
@@ -210,13 +341,13 @@ print_summary() {
         local status_text
         
         case "$status" in
-            ok)      status_text="${GREEN}[ OK ]${NC}" ;;
-            fail)    status_text="${RED}[FAIL]${NC}" ;;
-            running) status_text="${YELLOW}[????]${NC}" ;;
-            *)       status_text="${DIM}[SKIP]${NC}" ;;
+            ok)      status_text="${GREEN}[SUCCESS]${NC}" ;;
+            fail)    status_text="${RED}[FAILED ]${NC}" ;;
+            running) status_text="${YELLOW}[RUNNING]${NC}" ;;
+            *)       status_text="${DIM}[PENDING]${NC}" ;;
         esac
         
-        printf "[%2d/%d] %-${max_len}s %b\n" "$step_num" "$TOTAL_STEPS" "$name" "$status_text"
+        printf "%b [%d/%d] %-${max_len}s\n" "$status_text" "$step_num" "$TOTAL_STEPS" "$name"
     done
     echo ""
 }

@@ -38,6 +38,12 @@ export interface HandlerConfig {
    * and when to start tracking seeks.
    */
   positionTrackingTiming?: TrackingTimingConfig;
+  /**
+   * Get stable content identifier for detecting new content.
+   * Used instead of video source tracking for services with dynamic blob URLs (MSE/DASH).
+   * Returns null if content cannot be identified (falls back to video element tracking only).
+   */
+  getContentId?: () => string | null;
   subtitles?: SubtitleConfig;
   features?: FeatureFlags;
 }

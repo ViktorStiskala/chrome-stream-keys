@@ -203,6 +203,22 @@ function getDialogContainer(): HTMLElement | null {
 }
 
 /**
+ * Get content ID from URL for detecting episode changes.
+ * BBC URL pattern: /iplayer/episode/{episodeId}/{slug}
+ *
+ * This is used instead of video source tracking because BBC uses MediaSource Extensions
+ * (MSE/DASH.js) which causes video.currentSrc to change frequently with dynamic blob URLs.
+ * The episode ID from URL is stable and only changes when navigating to a different episode.
+ *
+ * Note: Returns the same ID during trailers and main content (same URL).
+ * Trailer handling is done separately via getVideo() returning null during trailers.
+ */
+function getContentId(): string | null {
+  const match = window.location.pathname.match(/\/iplayer\/episode\/([^/]+)/);
+  return match?.[1] ?? null;
+}
+
+/**
  * Subtitle config for BBC iPlayer
  * BBC only has a simple on/off toggle, no language selection
  * Click the host element (smp-toggle), read state from inner .toggle div
@@ -271,6 +287,14 @@ function initBBCHandler(): void {
     },
 
     getDialogContainer,
+    getContentId,
+
+    // BBC's player initializes slowly - auto-resume can take 2-3 seconds
+    // Default 1000ms window is too short; extend to 3000ms for reliable capture
+    positionTrackingTiming: {
+      loadTimeCaptureDelay: 3000,
+      readyForTrackingDelay: 500,
+    },
 
     subtitles: subtitleConfig,
 
@@ -296,6 +320,7 @@ export const BBCHandler = {
     getSubtitlesToggle,
     clickSubtitleToggle,
     getDialogContainer,
+    getContentId,
     isTrailerPlaying,
     subtitles: subtitleConfig,
   },

@@ -17,6 +17,12 @@ export interface RestorePositionConfig {
   timing?: TrackingTimingConfig;
   /** Custom container for restore dialog (for fullscreen in Shadow DOM environments) */
   getDialogContainer?: () => HTMLElement | null;
+  /**
+   * Get stable content identifier for detecting new content.
+   * Used instead of video source tracking for services with dynamic blob URLs (MSE/DASH).
+   * Returns null if content cannot be identified (falls back to video element tracking only).
+   */
+  getContentId?: () => string | null;
 }
 
 export interface RestorePositionAPI {
@@ -48,22 +54,35 @@ function initRestorePosition(config: RestorePositionConfig): RestorePositionAPI 
   let videoCleanup: CleanupFn | null = null;
   let earlySetupInterval: ReturnType<typeof setInterval> | null = null;
 
-  const { getVideoElement, seekToTime, timing, getDialogContainer } = config;
+  const { getVideoElement, seekToTime, timing, getDialogContainer, getContentId } = config;
 
   // Track current video to detect when a new video starts
-  // We track both the element AND the source because:
+  // We track both the element AND the source/content ID because:
   // - HBO Max: new video = new DOM element
   // - Disney+: may reuse element but change src (blob URL)
+  // - BBC: uses MSE with dynamic blob URLs, so we use content ID (episode ID from URL) instead
   let currentVideo: StreamKeysVideoElement | null = null;
   let currentVideoSrc: string | null = null;
+  let currentContentId: string | null = null;
 
   // Setup video listeners
   const setupVideoListeners = () => {
     const video = getVideoElement();
     if (!video) return;
 
-    const videoSrc = video.src || video.currentSrc || null;
-    const isNewVideo = currentVideo !== video || (videoSrc && currentVideoSrc !== videoSrc);
+    // Use content ID if provided (for services with dynamic blob URLs like BBC)
+    // Otherwise fall back to video source tracking
+    const contentId = getContentId?.() ?? null;
+    const videoSrc = getContentId ? null : (video.src || video.currentSrc || null);
+
+    // Detect content change:
+    // - If using content ID: change when ID changes (and we had a previous ID)
+    // - If using source tracking: change when source changes (and we had a previous source)
+    const isNewContent = contentId
+      ? currentContentId !== null && currentContentId !== contentId
+      : videoSrc && currentVideoSrc !== videoSrc;
+
+    const isNewVideo = currentVideo !== video || isNewContent;
 
     if (isNewVideo && currentVideo !== null) {
       // New video detected - reset history from previous video
@@ -87,6 +106,7 @@ function initRestorePosition(config: RestorePositionConfig): RestorePositionAPI 
     // Update tracking references
     currentVideo = video;
     currentVideoSrc = videoSrc;
+    currentContentId = contentId;
 
     // Set up tracking if not already done
     if (!video._streamKeysSeekListenerAdded) {
