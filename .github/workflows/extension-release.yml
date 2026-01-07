@@ -57,12 +57,12 @@ jobs:
           APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
           APPLE_ID: ${{ vars.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-        run: bash scripts/build-safari-signed.sh --dmg
+        run: bash scripts/build-safari/main.sh --dmg --signed
 
       - name: Build Safari App Store Package
         env:
           APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
-        run: bash scripts/build-safari-signed.sh --appstore
+        run: bash scripts/build-safari/main.sh --appstore
 
       - name: Clean up keychain
         if: always()

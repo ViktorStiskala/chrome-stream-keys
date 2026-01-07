@@ -1,0 +1,14 @@
+{
+  "title": "Stream Keys",
+  "icon": "../../src/logo/StreamKeys_128.png",
+  "icon-size": 175,
+  "background": "../../../../assets/dmg-background.png",
+  "window": {
+    "position": { "x": 200, "y": 120 },
+    "size": { "width": 660, "height": 480 }
+  },
+  "contents": [
+    { "x": 151, "y": 294, "type": "file", "path": "../../build/production/safari/xcode/DerivedData/Build/Products/Release/Stream Keys.app" },
+    { "x": 510, "y": 289, "type": "link", "path": "/Applications" }
+  ]
+}

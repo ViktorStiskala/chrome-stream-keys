@@ -1,9 +1,10 @@
 ---
-description: Build commands and development workflow for the StreamKeys browser extension. Apply this rule when running npm scripts (dev, build, typecheck, lint, format), creating development or production builds, targeting different browsers (Chrome, Firefox), configuring the BROWSER environment variable, troubleshooting build output directories (build/dev/, build/production/), or dealing with multi-browser compilation issues. Relevant keywords: npm run dev, npm run build, vite, webpack, bundle, compile, production, development mode.
+description: Build commands and development workflow for the StreamKeys browser extension. Apply this rule when running npm scripts (dev, build, typecheck, lint, format), creating development or production builds, targeting different browsers (Chrome, Firefox, Safari), configuring the BROWSER environment variable, troubleshooting build output directories (build/dev/, build/production/), dealing with multi-browser compilation issues, or working with Safari DMG builds. Relevant keywords: npm run dev, npm run build, vite, webpack, bundle, compile, production, development mode, safari, dmg, appdmg, notarize.
 globs:
   - "vite.config.ts"
   - "package.json"
   - "tsconfig.json"
+  - "scripts/build-safari/**"
 alwaysApply: false
 ---
 
@@ -19,6 +20,53 @@ alwaysApply: false
 - `npm run build` - Production build (Chrome by default)
 - `npm run build:firefox` - Firefox build
 
+## Safari Builds
+
+Safari builds use the modular `scripts/build-safari/` directory with different modes:
+
+- `npm run build:safari` - Local testing DMG (ad-hoc signed, not notarized)
+- `npm run build:safari:signed` - Distribution DMG (signed + notarized)
+- `bash scripts/build-safari/main.sh --appstore` - App Store package
+
+### Build Script Structure
+
+```
+scripts/build-safari/
+├── main.sh           # Entry point, argument parsing, build flow
+├── config.sh         # App metadata, paths, signing identities
+├── ui.sh             # Colors, TTY detection, live progress header
+├── steps.sh          # step(), step_check(), step tracking
+├── helpers.sh        # info, success, error, run, notarytool, cleanup
+└── dmg-config.json   # appdmg configuration
+```
+
+### Build Script Options
+
+```bash
+# Local testing (no signing credentials needed)
+./scripts/build-safari/main.sh --dmg
+
+# Distribution (requires APPLE_TEAM_ID, APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD)
+./scripts/build-safari/main.sh --dmg --signed
+
+# App Store (requires APPLE_TEAM_ID)
+./scripts/build-safari/main.sh --appstore
+```
+
+### Styled DMG Installer
+
+Safari DMGs are created with `appdmg` using a custom background image showing:
+- Stream Keys app icon (left, 150x150 at 103,162)
+- Arrow graphic pointing to Applications folder
+- Applications folder shortcut for drag-and-drop installation (150x150 at 408,162)
+
+Configuration: `scripts/build-safari/dmg-config.json` (paths relative to config file location)
+Background: `assets/dmg-background.png` (660x400px, or 1320x800 for Retina)
+
+### Live Progress Display
+
+In TTY mode, the build shows a live ASCII progress header with step status. Falls back to simple output in CI.
+
 ## Code Quality
 
 - `npm run typecheck` - Type checking without emit
@@ -33,7 +81,9 @@ alwaysApply: false
 Set `BROWSER` environment variable to target different browsers:
 - `chrome` (default) - Chromium-based browsers (Chrome, Edge, Brave)
 - `firefox` - Firefox desktop
+- `safari` - Safari (macOS only, use build:safari scripts)
 
 Output directories:
 - Dev: `build/dev/{browser}/extension`
 - Prod: `build/production/{browser}/extension`
+- Safari DMG: `build/production/safari/stream-keys-safari.dmg`
